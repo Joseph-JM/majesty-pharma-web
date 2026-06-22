@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bright-red: #E40909;
+  --gold: #E3BB4B;
+  --dark-gray: #565656;
+  --white: #FFFFFF;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f7f7f6;
+}
+
+::selection {
+  background: rgba(228, 9, 9, 0.14);
+}
