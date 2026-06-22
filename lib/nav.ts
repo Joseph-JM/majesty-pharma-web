@@ -9,6 +9,7 @@ export type NavItem = {
 export const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", permission: "dashboard:view" },
   { label: "Sales Orders", href: "/sales-orders", permission: "sales-orders:view" },
+  { label: "Customers", href: "/customers", permission: "customers:view" },
   { label: "Inventory", href: "/inventory", permission: "inventory:view" },
   { label: "Profile", href: "/profile", permission: "profile:view" },
   { label: "Admin", href: "/admin", permission: "admin:view" },
@@ -16,6 +17,7 @@ export const navItems: NavItem[] = [
 ];
 
 export const roleLabels: Record<Role, string> = {
-  admin: "Administrator",
-  user: "User",
+  systemAdmin: "System Admin",
+  approver: "Approver",
+  salesOrder: "Sales Order",
 };

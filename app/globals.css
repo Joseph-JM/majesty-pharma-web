@@ -21,3 +21,33 @@ body {
 ::selection {
   background: rgba(228, 9, 9, 0.14);
 }
+
+.modal-scrollbar {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(228, 9, 9, 0.45) rgba(24, 24, 27, 0.06);
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+.modal-scrollbar::-webkit-scrollbar {
+  width: 12px;
+}
+
+.modal-scrollbar::-webkit-scrollbar-track {
+  margin: 14px 0;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, rgba(24, 24, 27, 0.04), rgba(24, 24, 27, 0.08));
+}
+
+.modal-scrollbar::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, rgba(228, 9, 9, 0.72), rgba(227, 187, 75, 0.72));
+  background-clip: padding-box;
+}
+
+.modal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(228, 9, 9, 0.9), rgba(227, 187, 75, 0.86));
+  background-clip: padding-box;
+}

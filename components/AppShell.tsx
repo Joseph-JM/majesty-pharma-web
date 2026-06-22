@@ -2,8 +2,15 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useSyncExternalStore } from "react";
 import clsx from "clsx";
-import { canAccess, type Role } from "@/lib/auth";
+import {
+  canAccess,
+  getServerRoleDefinitionsSnapshot,
+  readRoleDefinitionsSnapshot,
+  subscribeToRoleDefinitionStore,
+  type Role,
+} from "@/lib/auth";
 import { navItems, roleLabels } from "@/lib/nav";
 import { useAuth } from "./AuthProvider";
 
@@ -11,6 +18,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout, switchRole } = useAuth();
+
+  useSyncExternalStore(subscribeToRoleDefinitionStore, readRoleDefinitionsSnapshot, getServerRoleDefinitionsSnapshot);
 
   if (!user) return <>{children}</>;
 
@@ -73,8 +82,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 onChange={(event) => switchRole(event.target.value as Role)}
                 className="h-10 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-brand-gray outline-none focus:border-brand-red"
               >
-                <option value="admin">Admin Role</option>
-                <option value="user">User Role</option>
+                <option value="systemAdmin">System Admin</option>
+                <option value="approver">Approver</option>
+                <option value="salesOrder">Sales Order</option>
               </select>
             </div>
           </div>

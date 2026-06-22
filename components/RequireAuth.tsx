@@ -1,13 +1,20 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { canAccess } from "@/lib/auth";
+import { useEffect, useSyncExternalStore } from "react";
+import {
+  canAccess,
+  getServerRoleDefinitionsSnapshot,
+  readRoleDefinitionsSnapshot,
+  subscribeToRoleDefinitionStore,
+} from "@/lib/auth";
 import { useAuth } from "./AuthProvider";
 
 export function RequireAuth({ children, permission }: { children: React.ReactNode; permission?: string }) {
   const { user } = useAuth();
   const router = useRouter();
+
+  useSyncExternalStore(subscribeToRoleDefinitionStore, readRoleDefinitionsSnapshot, getServerRoleDefinitionsSnapshot);
 
   useEffect(() => {
     if (!user) router.replace("/login");

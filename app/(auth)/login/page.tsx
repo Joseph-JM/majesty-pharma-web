@@ -41,7 +41,7 @@ export default function LoginPage() {
           <Button className="mt-6 w-full" type="submit">Login</Button>
 
           <div className="mt-5 rounded-xl bg-zinc-50 p-4 text-xs leading-6 text-brand-gray">
-            Use <strong>admin@company.com</strong> for Admin access or <strong>user@company.com</strong> for User access.
+            Use <strong>admin@company.com</strong> for System Admin access, <strong>approver@company.com</strong> for the Approver persona, or <strong>sales@company.com</strong> for the Sales Order persona.
           </div>
         </form>
       </section>

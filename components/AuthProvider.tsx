@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useMemo, useSyncExternalStore } from "react";
-import { demoUsers, type Role, type User } from "@/lib/auth";
+import { demoUsers, normalizeRole, type Role, type User } from "@/lib/auth";
 
 type AuthContextValue = {
   user: User | null;
@@ -32,7 +32,15 @@ function parseStoredUser(snapshot: string | null) {
   if (!snapshot) return null;
 
   try {
-    return JSON.parse(snapshot) as User;
+    const parsed = JSON.parse(snapshot) as User & { role?: string };
+    const role = normalizeRole(parsed.role);
+    const fallbackUser = demoUsers[role];
+
+    return {
+      ...fallbackUser,
+      ...parsed,
+      role,
+    } satisfies User;
   } catch {
     return null;
   }
@@ -80,7 +88,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<AuthContextValue>(() => ({
     user,
     login: (email: string) => {
-      const role = email.toLowerCase().includes("admin") ? "admin" : "user";
+      const normalizedEmail = email.toLowerCase();
+      const role = normalizedEmail.includes("admin")
+        ? "systemAdmin"
+        : normalizedEmail.includes("approver")
+          ? "approver"
+          : "salesOrder";
       const selectedUser = { ...demoUsers[role], email };
       writeStoredUser(selectedUser);
       return true;

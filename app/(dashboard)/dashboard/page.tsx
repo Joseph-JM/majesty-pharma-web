@@ -10,13 +10,13 @@ export default function DashboardPage() {
 
   const stats = [
     { label: "Sales Order Backlog", value: formatCurrency(salesOrderSummary.totalOpenAmount) },
-    { label: "Ready to Ship", value: formatNumber(salesOrderSummary.readyToShip) },
+    { label: "Released Orders", value: formatNumber(salesOrderSummary.releasedCount) },
     { label: "Inventory Value", value: formatCurrency(inventorySummary.inventoryValue) },
     { label: "Low Stock Items", value: formatNumber(inventorySummary.lowStockCount) },
   ];
 
-  const postedToday = salesOrders.filter((order) => order.status === "Posted").length;
-  const activeOrders = salesOrders.filter((order) => order.status !== "Posted").length;
+  const postedToday = salesOrders.filter((order) => order.status === "Post").length;
+  const activeOrders = salesOrders.filter((order) => order.status !== "Post").length;
 
   return (
     <RequireAuth permission="dashboard:view">
@@ -50,9 +50,9 @@ export default function DashboardPage() {
             </div>
             <div className="mt-6 grid gap-4 md:grid-cols-3">
               <div className="rounded-xl bg-zinc-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-gray">Awaiting Approval</p>
-                <p className="mt-3 text-2xl font-semibold text-zinc-950">{formatNumber(salesOrderSummary.awaitingApproval)}</p>
-                <p className="mt-2 text-sm text-brand-gray">Orders that still need commercial release before pick allocation.</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-gray">Approval Requests</p>
+                <p className="mt-3 text-2xl font-semibold text-zinc-950">{formatNumber(salesOrderSummary.approvalRequestCount)}</p>
+                <p className="mt-2 text-sm text-brand-gray">Orders that were created and are waiting for approval before release.</p>
               </div>
               <div className="rounded-xl bg-zinc-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-gray">Inventory Coverage</p>
@@ -76,10 +76,10 @@ export default function DashboardPage() {
               </div>
               <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-4">
                 <p className="font-semibold text-zinc-950">{formatNumber(activeOrders)} active sales documents</p>
-                <p className="mt-1 text-brand-gray">Use Sales Orders to reserve stock, then post shipments when fully covered.</p>
+                <p className="mt-1 text-brand-gray">Move orders from Open to Approval Request, then Released, and finally Post.</p>
               </div>
               <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-4">
-                <p className="font-semibold text-zinc-950">{formatNumber(postedToday)} posted shipments</p>
+                <p className="font-semibold text-zinc-950">{formatNumber(postedToday)} posted sales orders</p>
                 <p className="mt-1 text-brand-gray">Posted documents immediately reduce stock on hand and clear allocations.</p>
               </div>
             </div>
