@@ -33,16 +33,16 @@ import {
 } from "@/lib/business";
 
 const selectClass =
-  "mt-2 h-11 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm text-zinc-950 outline-none transition focus:border-brand-red focus:ring-4 focus:ring-red-50";
+  "mt-2 h-10 w-full rounded-xl border border-zinc-200 bg-white px-3.5 text-sm text-zinc-950 outline-none transition focus:border-brand-red focus:ring-4 focus:ring-red-50";
 
 const toolbarSelectClass =
   "h-11 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm text-zinc-950 outline-none transition focus:border-brand-red focus:ring-4 focus:ring-red-50";
 
 const sectionCardClass =
-  "rounded-[26px] border border-zinc-200/80 bg-white p-5 shadow-[0_14px_40px_rgba(24,24,27,0.05)] sm:p-6";
+  "rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_26px_rgba(24,24,27,0.05)] sm:p-5";
 
-const sectionTitleClass = "text-lg font-semibold tracking-tight text-zinc-950";
-const sectionDescriptionClass = "mt-1 text-sm leading-6 text-brand-gray";
+const sectionTitleClass = "text-base font-semibold tracking-tight text-zinc-950";
+const sectionDescriptionClass = "mt-1 text-sm leading-5 text-brand-gray";
 
 type CustomerDraft = Customer;
 
@@ -121,6 +121,10 @@ export default function CustomersPage() {
   const isEditMode = Boolean(editingCustomer);
   const hasUnsavedChanges = hasCustomerDraftChanges(editingCustomer, draft);
   const customerIdExists = !isEditMode && draft.id.trim().length > 0 && customers.some((customer) => customer.id === draft.id.trim().toUpperCase());
+  const modalPrimaryActionLabel = editingCustomer ? "Save Changes" : "Create Customer";
+  const modalActionDescription = editingCustomer
+    ? "Review the loaded values and save any changes when the customer card details are ready."
+    : "Complete the main customer identity and account setup, then create the record to place it in the list.";
   const filteredCustomers = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
@@ -421,6 +425,7 @@ export default function CustomersPage() {
         </div>
 
         <Modal
+          allowFullscreen
           description={
             isEditMode
               ? "Full customer card details are loaded here so the team can review and update commercial, invoicing, payment, shipping, and statistics information."
@@ -431,37 +436,70 @@ export default function CustomersPage() {
           onClose={closeCustomerModal}
           title={editingCustomer ? `Customer ${editingCustomer.id}` : "New Customer Card"}
         >
-          <div className="space-y-6">
-            <div className="overflow-hidden rounded-[28px] border border-zinc-200/80 bg-[radial-gradient(circle_at_top_left,_rgba(227,187,75,0.20),_transparent_36%),linear-gradient(135deg,#fffdf8,#f8f3ea)] p-5 shadow-[0_12px_32px_rgba(24,24,27,0.05)] sm:p-6">
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-5">
+            <div className="overflow-hidden rounded-[24px] border border-zinc-200/80 bg-[radial-gradient(circle_at_top_left,_rgba(227,187,75,0.20),_transparent_36%),linear-gradient(135deg,#fffdf8,#f8f3ea)] p-4 shadow-[0_10px_24px_rgba(24,24,27,0.05)] sm:p-5">
+              <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
                 <div className="max-w-2xl">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-gold">Customer Composition</p>
+                  <div className="flex flex-wrap gap-3">
+                    <span className="rounded-full bg-white/85 px-3 py-1 text-xs font-semibold text-zinc-700 shadow-sm ring-1 ring-inset ring-white/80">
+                      {draft.blocked || "Not Blocked"}
+                    </span>
+                    <span className="rounded-full bg-white/85 px-3 py-1 text-xs font-semibold text-zinc-700 shadow-sm ring-1 ring-inset ring-white/80">
+                      {draft.paymentTermsCode}
+                    </span>
+                    {editingCustomer ? (
+                      <span
+                        className={hasUnsavedChanges
+                          ? "rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-200"
+                          : "rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200"}
+                      >
+                        {hasUnsavedChanges ? "Unsaved changes" : "All changes saved"}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-gold">Action Center</p>
                   <h4 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">
                     {editingCustomer ? `Inspect and update ${draft.id}` : "Build the customer card with full account details"}
                   </h4>
                   <p className="mt-2 text-sm leading-6 text-brand-gray">
-                    Keep every customer card aligned across finance, invoicing, shipping, and account servicing so the sales team can work with complete information.
+                    {modalActionDescription}
                   </p>
+                  {customerIdExists ? (
+                    <p className="mt-3 text-sm font-medium text-amber-700">This customer number already exists. Use a unique No. before creating the record.</p>
+                  ) : null}
                 </div>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-2xl border border-white/80 bg-white/85 px-4 py-3 shadow-sm">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-gray">Balance</p>
-                    <p className="mt-2 text-2xl font-semibold text-zinc-950">{formatCurrency(draft.balanceLcy)}</p>
+                <div className="w-full max-w-lg space-y-3">
+                  <div className="rounded-[20px] border border-white/80 bg-white/88 p-3.5 shadow-sm">
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <Button className="w-full rounded-2xl" disabled={!draft.name.trim() || customerIdExists} onClick={submitCustomer} type="button">
+                        {modalPrimaryActionLabel}
+                      </Button>
+                      <Button className="w-full rounded-2xl bg-zinc-900 hover:bg-zinc-700 focus:ring-zinc-200" onClick={closeCustomerModal} type="button">
+                        {editingCustomer ? "Close" : "Cancel"}
+                      </Button>
+                    </div>
                   </div>
-                  <div className="rounded-2xl border border-white/80 bg-white/85 px-4 py-3 shadow-sm">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-gray">Overdue</p>
-                    <p className="mt-2 text-2xl font-semibold text-zinc-950">{formatCurrency(draft.overdueBalanceLcy)}</p>
-                  </div>
-                  <div className="rounded-2xl border border-white/80 bg-white/85 px-4 py-3 shadow-sm">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-gray">Credit Usage</p>
-                    <p className="mt-2 text-2xl font-semibold text-zinc-950">{draftUsageOfCreditLimit}%</p>
+
+                  <div className="grid gap-2.5 sm:grid-cols-3">
+                    <div className="rounded-xl border border-white/80 bg-white/85 px-3 py-2.5 shadow-sm">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-gray">Balance</p>
+                      <p className="mt-1.5 text-xl font-semibold text-zinc-950">{formatCurrency(draft.balanceLcy)}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/80 bg-white/85 px-3 py-2.5 shadow-sm">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-gray">Overdue</p>
+                      <p className="mt-1.5 text-xl font-semibold text-zinc-950">{formatCurrency(draft.overdueBalanceLcy)}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/80 bg-white/85 px-3 py-2.5 shadow-sm">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-gray">Credit Usage</p>
+                      <p className="mt-1.5 text-xl font-semibold text-zinc-950">{draftUsageOfCreditLimit}%</p>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.75fr)_340px]">
-              <div className="space-y-6">
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1.85fr)_300px]">
+              <div className="space-y-5">
                 <section className={sectionCardClass}>
                   <h4 className={sectionTitleClass}>General</h4>
                   <p className={sectionDescriptionClass}>Core customer identity, balance, credit, and top-level commercial account fields.</p>
@@ -861,14 +899,14 @@ export default function CustomersPage() {
                 </section>
               </div>
 
-              <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
-                <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-white shadow-[0_14px_40px_rgba(24,24,27,0.06)]">
-                  <div className="bg-[linear-gradient(135deg,#18181b,#32323a)] px-5 py-4 text-white">
+              <aside className="space-y-3.5 xl:sticky xl:top-24 xl:self-start">
+                <div className="overflow-hidden rounded-[22px] border border-zinc-200/80 bg-white shadow-[0_10px_26px_rgba(24,24,27,0.06)]">
+                  <div className="bg-[linear-gradient(135deg,#18181b,#32323a)] px-4 py-3 text-white">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">Customer Snapshot</p>
-                    <p className="mt-2 text-2xl font-semibold">{draft.name || "New Customer"}</p>
+                    <p className="mt-1.5 text-xl font-semibold">{draft.name || "New Customer"}</p>
                     <p className="mt-1 text-sm text-white/75">{draft.id || "No. pending"} / {draft.city || "City pending"} / {draft.countryRegionCode}</p>
                   </div>
-                  <div className="space-y-3 px-5 py-5 text-sm">
+                  <div className="space-y-2.5 px-4 py-4 text-sm">
                     <div className="flex items-center justify-between gap-4">
                       <span className="text-brand-gray">Balance (LCY)</span>
                       <span className="font-semibold text-zinc-950">{formatCurrency(draft.balanceLcy)}</span>
@@ -888,27 +926,27 @@ export default function CustomersPage() {
                   </div>
                 </div>
 
-                <div className="rounded-[26px] border border-zinc-200/80 bg-white p-5 shadow-[0_14px_40px_rgba(24,24,27,0.06)]">
+                <div className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_26px_rgba(24,24,27,0.06)]">
                   <h5 className="text-base font-semibold text-zinc-950">Account Status</h5>
-                  <div className="mt-4 space-y-3 text-sm">
-                    <div className="flex items-center justify-between gap-4 rounded-2xl bg-zinc-50 px-4 py-3">
+                  <div className="mt-3 space-y-2.5 text-sm">
+                    <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-50 px-3.5 py-2.5">
                       <span className="text-brand-gray">Blocked</span>
                       <span className="font-semibold text-zinc-950">{draft.blocked || "No"}</span>
                     </div>
-                    <div className="flex items-center justify-between gap-4 rounded-2xl bg-zinc-50 px-4 py-3">
+                    <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-50 px-3.5 py-2.5">
                       <span className="text-brand-gray">Payment Terms</span>
                       <span className="font-semibold text-zinc-950">{draft.paymentTermsCode}</span>
                     </div>
-                    <div className="flex items-center justify-between gap-4 rounded-2xl bg-zinc-50 px-4 py-3">
+                    <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-50 px-3.5 py-2.5">
                       <span className="text-brand-gray">Location Code</span>
                       <span className="font-semibold text-zinc-950">{draft.locationCode}</span>
                     </div>
-                    <div className="flex items-center justify-between gap-4 rounded-2xl bg-zinc-50 px-4 py-3">
+                    <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-50 px-3.5 py-2.5">
                       <span className="text-brand-gray">Shipment Method</span>
                       <span className="font-semibold text-zinc-950">{draft.shipmentMethodCode}</span>
                     </div>
                     {editingCustomer ? (
-                      <div className="flex items-center justify-between gap-4 rounded-2xl bg-zinc-50 px-4 py-3">
+                      <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-50 px-3.5 py-2.5">
                         <span className="text-brand-gray">Unsaved Changes</span>
                         <span className={hasUnsavedChanges ? "font-semibold text-amber-700" : "font-semibold text-emerald-700"}>
                           {hasUnsavedChanges ? "Save first" : "None"}
@@ -916,26 +954,6 @@ export default function CustomersPage() {
                       </div>
                     ) : null}
                   </div>
-                </div>
-
-                <div className="rounded-[26px] border border-zinc-200/80 bg-white p-5 shadow-[0_14px_40px_rgba(24,24,27,0.06)]">
-                  <h5 className="text-base font-semibold text-zinc-950">Actions</h5>
-                  <p className="mt-2 text-sm leading-6 text-brand-gray">
-                    {editingCustomer
-                      ? "Review the loaded values and save any changes when the customer card details are ready."
-                      : "Complete the main customer identity and account setup, then create the record to place it in the list."}
-                  </p>
-                  <div className="mt-5 flex flex-col gap-3">
-                    <Button className="w-full rounded-2xl bg-zinc-900 hover:bg-zinc-700 focus:ring-zinc-200" onClick={closeCustomerModal} type="button">
-                      Cancel
-                    </Button>
-                    <Button className="w-full rounded-2xl" disabled={!draft.name.trim() || customerIdExists} onClick={submitCustomer} type="button">
-                      {editingCustomer ? "Save Changes" : "Create Customer"}
-                    </Button>
-                  </div>
-                  {customerIdExists ? (
-                    <p className="mt-3 text-xs leading-5 text-amber-700">This customer number already exists. Use a unique No. before creating the record.</p>
-                  ) : null}
                 </div>
               </aside>
             </div>

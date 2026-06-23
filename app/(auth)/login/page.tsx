@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
@@ -23,9 +24,16 @@ export default function LoginPage() {
     <main className="grid min-h-screen place-items-center bg-white px-5">
       <section className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-red text-xl font-bold text-white">M</div>
+          <Image
+            alt="Majesty Pharma ERP"
+            className="mx-auto h-auto w-full max-w-[280px]"
+            height={98}
+            priority
+            src="/majesty-pharma-logo.svg"
+            width={280}
+          />
           <h1 className="mt-6 text-3xl font-semibold tracking-tight text-zinc-950">Sign in to your account</h1>
-          <p className="mt-2 text-sm text-brand-gray">Minimal RBAC dashboard with a clean professional interface.</p>
+          <p className="mt-2 text-sm text-brand-gray">Majesty Pharma ERP with a clean and professional interface for daily operations.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="rounded-xl2 border border-zinc-100 bg-white p-6 shadow-soft">

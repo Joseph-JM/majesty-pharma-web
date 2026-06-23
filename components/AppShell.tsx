@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSyncExternalStore } from "react";
@@ -29,10 +30,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-[#f7f7f6] text-zinc-950">
       <aside className="fixed inset-y-0 left-0 hidden w-72 border-r border-zinc-200 bg-white p-6 lg:block">
         <div className="flex items-center gap-3">
-          <div className="grid h-11 w-11 place-items-center rounded-2xl bg-brand-red text-lg font-bold text-white">M</div>
           <div>
-            <p className="text-sm font-semibold text-zinc-950">Minimal RBAC</p>
-            <p className="text-xs text-brand-gray">Professional Admin UI</p>
+            <Image
+              alt="Majesty Pharma ERP"
+              className="h-auto w-[172px]"
+              height={60}
+              priority
+              src="/majesty-pharma-logo.svg"
+              width={172}
+            />
+            <p className="mt-2 text-xs font-medium uppercase tracking-[0.18em] text-brand-gray">Majesty Pharma ERP</p>
           </div>
         </div>
 
@@ -73,6 +80,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="sticky top-0 z-10 border-b border-zinc-200 bg-white/90 px-5 py-4 backdrop-blur lg:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
+              <div className="lg:hidden">
+                <Image
+                  alt="Majesty Pharma ERP"
+                  className="h-auto w-[156px]"
+                  height={54}
+                  priority
+                  src="/majesty-pharma-logo.svg"
+                  width={156}
+                />
+              </div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-gold">Workspace</p>
               <h1 className="text-xl font-semibold text-zinc-950">Welcome back, {user.name}</h1>
             </div>

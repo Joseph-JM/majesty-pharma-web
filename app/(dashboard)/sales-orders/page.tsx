@@ -49,16 +49,16 @@ const salesOrderStatusStyles = {
 };
 
 const selectClass =
-  "mt-2 h-11 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm text-zinc-950 outline-none transition focus:border-brand-red focus:ring-4 focus:ring-red-50";
+  "mt-2 h-10 w-full rounded-xl border border-zinc-200 bg-white px-3.5 text-sm text-zinc-950 outline-none transition focus:border-brand-red focus:ring-4 focus:ring-red-50";
 
 const toolbarSelectClass =
   "h-11 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm text-zinc-950 outline-none transition focus:border-brand-red focus:ring-4 focus:ring-red-50";
 
 const sectionCardClass =
-  "rounded-[26px] border border-zinc-200/80 bg-white p-5 shadow-[0_14px_40px_rgba(24,24,27,0.05)] sm:p-6";
+  "rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_26px_rgba(24,24,27,0.05)] sm:p-5";
 
-const sectionTitleClass = "text-lg font-semibold tracking-tight text-zinc-950";
-const sectionDescriptionClass = "mt-1 text-sm leading-6 text-brand-gray";
+const sectionTitleClass = "text-base font-semibold tracking-tight text-zinc-950";
+const sectionDescriptionClass = "mt-1 text-sm leading-5 text-brand-gray";
 
 type DraftLine = {
   sku: string;
@@ -285,6 +285,12 @@ export default function SalesOrdersPage() {
       : editingOrder?.status === "Released"
         ? canManageOrders
         : false;
+  const modalPrimaryActionLabel = editingOrder ? "Save Changes" : "Create Sales Order";
+  const modalActionDescription = editingOrder
+    ? isPostedView
+      ? "This record can be reviewed in full here, but posted orders are locked from edits."
+      : "Review the loaded values, save any edits, then use the workflow action below based on the current status."
+    : "Once the draft looks right, create the order and move it through Approval Request, Released, and Post from this action deck.";
 
   const filteredOrders = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -740,6 +746,7 @@ export default function SalesOrdersPage() {
         </div>
 
         <Modal
+          allowFullscreen
           description={
             isEditMode
               ? "Full Sales Order details are loaded here for review and editing. Posted documents remain view-only to protect the inventory history."
@@ -749,39 +756,87 @@ export default function SalesOrdersPage() {
           onClose={closeOrderModal}
           title={editingOrder ? `Sales Order ${editingOrder.id}` : "New Sales Order"}
         >
-          <div className="space-y-6">
-            <div className="overflow-hidden rounded-[28px] border border-zinc-200/80 bg-[radial-gradient(circle_at_top_left,_rgba(227,187,75,0.20),_transparent_36%),linear-gradient(135deg,#fffdf8,#f8f3ea)] p-5 shadow-[0_12px_32px_rgba(24,24,27,0.05)] sm:p-6">
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-5">
+            <div className="overflow-hidden rounded-[24px] border border-zinc-200/80 bg-[radial-gradient(circle_at_top_left,_rgba(227,187,75,0.20),_transparent_36%),linear-gradient(135deg,#fffdf8,#f8f3ea)] p-4 shadow-[0_10px_24px_rgba(24,24,27,0.05)] sm:p-5">
+              <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
                 <div className="max-w-2xl">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-gold">Order Composition</p>
+                  <div className="flex flex-wrap gap-3">
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${salesOrderStatusStyles[editingOrder?.status ?? "Open"]}`}>
+                      Status: {editingOrder?.status ?? "Open"}
+                    </span>
+                    <span className="rounded-full bg-white/85 px-3 py-1 text-xs font-semibold text-zinc-700 shadow-sm ring-1 ring-inset ring-white/80">
+                      {draftLines.length > 0 ? `${formatNumber(draftLines.length)} line items` : "No lines yet"}
+                    </span>
+                    {editingOrder ? (
+                      <span
+                        className={hasUnsavedChanges
+                          ? "rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-200"
+                          : "rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200"}
+                      >
+                        {hasUnsavedChanges ? "Unsaved changes" : "All changes saved"}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-gold">Action Center</p>
                   <h4 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">
-                    {editingOrder ? `Inspect and update ${editingOrder.id}` : "Build the sales order with confidence"}
+                    {editingOrder ? `Inspect, update, and move ${editingOrder.id}` : "Build and submit the sales order from one place"}
                   </h4>
                   <p className="mt-2 text-sm leading-6 text-brand-gray">
-                    {editingOrder
-                      ? "Review the complete order, adjust document details, and save updates while preserving the workflow status."
-                      : "Use the document sections below to shape the order header, add lines, review the VAT impact, and confirm the commercial terms before creating the record."}
+                    {modalActionDescription}
                   </p>
+                  {editingOrder && !isPostedView && hasUnsavedChanges ? (
+                    <p className="mt-3 text-sm font-medium text-amber-700">Save changes before moving this order to the next status.</p>
+                  ) : editingOrder && !isPostedView && modalWorkflowActionLabel && !canRunWorkflowAction ? (
+                    <p className="mt-3 text-sm font-medium text-brand-gray">Your current persona does not have permission for this workflow step.</p>
+                  ) : null}
                 </div>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-2xl border border-white/80 bg-white/85 px-4 py-3 shadow-sm">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-gray">Lines</p>
-                    <p className="mt-2 text-2xl font-semibold text-zinc-950">{formatNumber(draftLines.length)}</p>
+                <div className="w-full max-w-lg space-y-3">
+                  <div className="rounded-[20px] border border-white/80 bg-white/88 p-3.5 shadow-sm">
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <Button
+                        className="w-full rounded-2xl"
+                        disabled={isPostedView || !canManageOrders || !draft.customerName.trim() || draftLines.length === 0}
+                        onClick={submitOrder}
+                        type="button"
+                      >
+                        {modalPrimaryActionLabel}
+                      </Button>
+                      {editingOrder && !isPostedView && modalWorkflowActionLabel ? (
+                        <Button
+                          className="w-full rounded-2xl bg-white text-zinc-900 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50 disabled:opacity-50"
+                          disabled={hasUnsavedChanges || !canRunWorkflowAction}
+                          onClick={runModalWorkflowAction}
+                          type="button"
+                        >
+                          {modalWorkflowActionLabel}
+                        </Button>
+                      ) : null}
+                      <Button className="w-full rounded-2xl bg-zinc-900 hover:bg-zinc-700 focus:ring-zinc-200" onClick={closeOrderModal} type="button">
+                        {isPostedView ? "Close" : "Cancel"}
+                      </Button>
+                    </div>
                   </div>
-                  <div className="rounded-2xl border border-white/80 bg-white/85 px-4 py-3 shadow-sm">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-gray">Location</p>
-                    <p className="mt-2 text-2xl font-semibold text-zinc-950">{draft.locationCode}</p>
-                  </div>
-                  <div className="rounded-2xl border border-white/80 bg-white/85 px-4 py-3 shadow-sm">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-gray">Total</p>
-                    <p className="mt-2 text-2xl font-semibold text-zinc-950">{formatCurrency(draftTotalInclVat)}</p>
+
+                  <div className="grid gap-2.5 sm:grid-cols-3">
+                    <div className="rounded-xl border border-white/80 bg-white/85 px-3 py-2.5 shadow-sm">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-gray">Lines</p>
+                      <p className="mt-1.5 text-xl font-semibold text-zinc-950">{formatNumber(draftLines.length)}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/80 bg-white/85 px-3 py-2.5 shadow-sm">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-gray">Location</p>
+                      <p className="mt-1.5 text-xl font-semibold text-zinc-950">{draft.locationCode}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/80 bg-white/85 px-3 py-2.5 shadow-sm">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-gray">Total</p>
+                      <p className="mt-1.5 text-xl font-semibold text-zinc-950">{formatCurrency(draftTotalInclVat)}</p>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_340px]">
-              <fieldset className="space-y-6 min-w-0" disabled={isPostedView || !canManageOrders}>
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_300px]">
+              <fieldset className="space-y-5 min-w-0" disabled={isPostedView || !canManageOrders}>
                 <section className={sectionCardClass}>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                     <div>
@@ -1242,14 +1297,14 @@ export default function SalesOrdersPage() {
                 </section>
               </fieldset>
 
-              <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
-                <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-white shadow-[0_14px_40px_rgba(24,24,27,0.06)]">
-                  <div className="bg-[linear-gradient(135deg,#18181b,#32323a)] px-5 py-4 text-white">
+              <aside className="space-y-3.5 xl:sticky xl:top-24 xl:self-start">
+                <div className="overflow-hidden rounded-[22px] border border-zinc-200/80 bg-white shadow-[0_10px_26px_rgba(24,24,27,0.06)]">
+                  <div className="bg-[linear-gradient(135deg,#18181b,#32323a)] px-4 py-3 text-white">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">Order Snapshot</p>
-                    <p className="mt-2 text-2xl font-semibold">{formatCurrency(draftTotalInclVat)}</p>
+                    <p className="mt-1.5 text-xl font-semibold">{formatCurrency(draftTotalInclVat)}</p>
                     <p className="mt-1 text-sm text-white/75">Total inclusive of VAT based on the current draft.</p>
                   </div>
-                  <div className="space-y-3 px-5 py-5 text-sm">
+                  <div className="space-y-2.5 px-4 py-4 text-sm">
                     <div className="flex items-center justify-between gap-4">
                       <span className="text-brand-gray">Subtotal Excl. VAT</span>
                       <span className="font-semibold text-zinc-950">{formatCurrency(draftSubtotal)}</span>
@@ -1273,27 +1328,27 @@ export default function SalesOrdersPage() {
                   </div>
                 </div>
 
-                <div className="rounded-[26px] border border-zinc-200/80 bg-white p-5 shadow-[0_14px_40px_rgba(24,24,27,0.06)]">
+                <div className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_26px_rgba(24,24,27,0.06)]">
                   <h5 className="text-base font-semibold text-zinc-950">Readiness</h5>
-                  <div className="mt-4 space-y-3 text-sm">
-                    <div className="flex items-center justify-between gap-4 rounded-2xl bg-zinc-50 px-4 py-3">
+                  <div className="mt-3 space-y-2.5 text-sm">
+                    <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-50 px-3.5 py-2.5">
                       <span className="text-brand-gray">Customer Name</span>
                       <span className={draft.customerName.trim() ? "font-semibold text-emerald-700" : "font-semibold text-amber-700"}>
                         {draft.customerName.trim() ? "Ready" : "Needed"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between gap-4 rounded-2xl bg-zinc-50 px-4 py-3">
+                    <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-50 px-3.5 py-2.5">
                       <span className="text-brand-gray">Line Items</span>
                       <span className={draftLines.length > 0 ? "font-semibold text-emerald-700" : "font-semibold text-amber-700"}>
                         {draftLines.length > 0 ? `${formatNumber(draftLines.length)} added` : "Add lines"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between gap-4 rounded-2xl bg-zinc-50 px-4 py-3">
+                    <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-50 px-3.5 py-2.5">
                       <span className="text-brand-gray">Terms / Due Date</span>
                       <span className="font-semibold text-zinc-950">{draft.paymentTermsCode}</span>
                     </div>
                     {editingOrder ? (
-                      <div className="flex items-center justify-between gap-4 rounded-2xl bg-zinc-50 px-4 py-3">
+                      <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-50 px-3.5 py-2.5">
                         <span className="text-brand-gray">Unsaved Changes</span>
                         <span className={hasUnsavedChanges ? "font-semibold text-amber-700" : "font-semibold text-emerald-700"}>
                           {hasUnsavedChanges ? "Save first" : "None"}
@@ -1308,40 +1363,6 @@ export default function SalesOrdersPage() {
                         ? "This persona can review order details, but editing is limited by role-based permissions."
                         : "Lifecycle: Open to Approval Request to Released to Post."}
                   </p>
-                </div>
-
-                <div className="rounded-[26px] border border-zinc-200/80 bg-white p-5 shadow-[0_14px_40px_rgba(24,24,27,0.06)]">
-                  <h5 className="text-base font-semibold text-zinc-950">Actions</h5>
-                  <p className="mt-2 text-sm leading-6 text-brand-gray">
-                    {editingOrder
-                      ? isPostedView
-                        ? "This record can be reviewed in full here, but posted orders are locked from edits."
-                        : "Review the loaded values, save any edits, then use the workflow action below based on the current status."
-                      : "Once the draft looks right, create the order and move it through Approval Request, Released, and Post from the order list."}
-                  </p>
-                  <div className="mt-5 flex flex-col gap-3">
-                    <Button className="w-full rounded-2xl bg-zinc-900 hover:bg-zinc-700 focus:ring-zinc-200" onClick={closeOrderModal} type="button">
-                      {isPostedView ? "Close" : "Cancel"}
-                    </Button>
-                    <Button className="w-full rounded-2xl" disabled={isPostedView || !canManageOrders || !draft.customerName.trim() || draftLines.length === 0} onClick={submitOrder} type="button">
-                      {editingOrder ? "Save Changes" : "Create Sales Order"}
-                    </Button>
-                    {editingOrder && !isPostedView && modalWorkflowActionLabel ? (
-                      <Button
-                        className="w-full rounded-2xl bg-white text-zinc-900 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50 disabled:opacity-50"
-                        disabled={hasUnsavedChanges || !canRunWorkflowAction}
-                        onClick={runModalWorkflowAction}
-                        type="button"
-                      >
-                        {modalWorkflowActionLabel}
-                      </Button>
-                    ) : null}
-                  </div>
-                  {editingOrder && !isPostedView && hasUnsavedChanges ? (
-                    <p className="mt-3 text-xs leading-5 text-amber-700">Save changes before moving this order to the next status.</p>
-                  ) : editingOrder && !isPostedView && modalWorkflowActionLabel && !canRunWorkflowAction ? (
-                    <p className="mt-3 text-xs leading-5 text-brand-gray">Your current persona does not have permission for this workflow step.</p>
-                  ) : null}
                 </div>
               </aside>
             </div>

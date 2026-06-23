@@ -44,16 +44,16 @@ const inventoryHealthStyles = {
 };
 
 const selectClass =
-  "mt-2 h-11 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm text-zinc-950 outline-none transition focus:border-brand-red focus:ring-4 focus:ring-red-50";
+  "mt-2 h-10 w-full rounded-xl border border-zinc-200 bg-white px-3.5 text-sm text-zinc-950 outline-none transition focus:border-brand-red focus:ring-4 focus:ring-red-50";
 
 const toolbarSelectClass =
   "h-11 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm text-zinc-950 outline-none transition focus:border-brand-red focus:ring-4 focus:ring-red-50";
 
 const sectionCardClass =
-  "rounded-[26px] border border-zinc-200/80 bg-white p-5 shadow-[0_14px_40px_rgba(24,24,27,0.05)] sm:p-6";
+  "rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_26px_rgba(24,24,27,0.05)] sm:p-5";
 
-const sectionTitleClass = "text-lg font-semibold tracking-tight text-zinc-950";
-const sectionDescriptionClass = "mt-1 text-sm leading-6 text-brand-gray";
+const sectionTitleClass = "text-base font-semibold tracking-tight text-zinc-950";
+const sectionDescriptionClass = "mt-1 text-sm leading-5 text-brand-gray";
 
 type InventoryDraft = Omit<InventoryItem, "health">;
 
@@ -187,6 +187,10 @@ export default function InventoryPage() {
   const itemValue = draft.onHand * draft.unitCost;
   const skuAlreadyExists = !isEditMode && draft.sku.trim().length > 0 && inventoryItems.some((item) => item.sku === draft.sku.trim().toUpperCase());
   const hasUnsavedChanges = hasInventoryDraftChanges(editingItem, draft);
+  const modalPrimaryActionLabel = isEditMode ? "Save Changes" : "Create Item";
+  const modalActionDescription = isEditMode
+    ? "Review the loaded item values, save any updates, and use the receipt area when stock lands."
+    : "Complete the key item card details first, then create the record to make it available for inventory operations.";
   const filteredInventoryItems = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
@@ -529,6 +533,7 @@ export default function InventoryPage() {
         </div>
 
         <Modal
+          allowFullscreen
           description={
             isEditMode
               ? "Full Item Card details are loaded here so the team can review and update inventory, sales, planning, warehouse, and tax fields in one place."
@@ -538,37 +543,72 @@ export default function InventoryPage() {
           onClose={closeItemModal}
           title={isEditMode ? `Item Card ${draft.sku}` : "New Item Card"}
         >
-          <div className="space-y-6">
-            <div className="overflow-hidden rounded-[28px] border border-zinc-200/80 bg-[radial-gradient(circle_at_top_left,_rgba(227,187,75,0.20),_transparent_36%),linear-gradient(135deg,#fffdf8,#f8f3ea)] p-5 shadow-[0_12px_32px_rgba(24,24,27,0.05)] sm:p-6">
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-5">
+            <div className="overflow-hidden rounded-[24px] border border-zinc-200/80 bg-[radial-gradient(circle_at_top_left,_rgba(227,187,75,0.20),_transparent_36%),linear-gradient(135deg,#fffdf8,#f8f3ea)] p-4 shadow-[0_10px_24px_rgba(24,24,27,0.05)] sm:p-5">
+              <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
                 <div className="max-w-2xl">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-gold">Item Workspace</p>
+                  <div className="flex flex-wrap gap-3">
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${inventoryHealthStyles[draftHealth]}`}>
+                      {draftHealth}
+                    </span>
+                    <span className="rounded-full bg-white/85 px-3 py-1 text-xs font-semibold text-zinc-700 shadow-sm ring-1 ring-inset ring-white/80">
+                      {draft.location}
+                    </span>
+                    {isEditMode ? (
+                      <span
+                        className={hasUnsavedChanges
+                          ? "rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-200"
+                          : "rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200"}
+                      >
+                        {hasUnsavedChanges ? "Unsaved changes" : "All changes saved"}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-gold">Action Center</p>
                   <h4 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">
                     {isEditMode ? `Inspect and update ${draft.sku}` : "Build the item card with full operating details"}
                   </h4>
                   <p className="mt-2 text-sm leading-6 text-brand-gray">
-                    Keep the card aligned across sales, replenishment, planning, tracking, and warehouse handling so each SKU stays operationally complete.
+                    {modalActionDescription}
                   </p>
+                  {skuAlreadyExists ? (
+                    <p className="mt-3 text-sm font-medium text-amber-700">This item number already exists. Use a unique No. before creating the record.</p>
+                  ) : isEditMode && hasUnsavedChanges ? (
+                    <p className="mt-3 text-sm font-medium text-brand-gray">There are unsaved changes in this item card.</p>
+                  ) : null}
                 </div>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-2xl border border-white/80 bg-white/85 px-4 py-3 shadow-sm">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-gray">Available</p>
-                    <p className="mt-2 text-2xl font-semibold text-zinc-950">{formatNumber(draftAvailable)}</p>
+                <div className="w-full max-w-lg space-y-3">
+                  <div className="rounded-[20px] border border-white/80 bg-white/88 p-3.5 shadow-sm">
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <Button className="w-full rounded-2xl" disabled={!draft.sku.trim() || !draft.description.trim() || skuAlreadyExists} onClick={submitItem} type="button">
+                        {modalPrimaryActionLabel}
+                      </Button>
+                      <Button className="w-full rounded-2xl bg-zinc-900 hover:bg-zinc-700 focus:ring-zinc-200" onClick={closeItemModal} type="button">
+                        {isEditMode ? "Close" : "Cancel"}
+                      </Button>
+                    </div>
                   </div>
-                  <div className="rounded-2xl border border-white/80 bg-white/85 px-4 py-3 shadow-sm">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-gray">Demand</p>
-                    <p className="mt-2 text-2xl font-semibold text-zinc-950">{formatNumber(demandForDraft)}</p>
-                  </div>
-                  <div className="rounded-2xl border border-white/80 bg-white/85 px-4 py-3 shadow-sm">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-gray">Health</p>
-                    <p className="mt-2 text-2xl font-semibold text-zinc-950">{draftHealth}</p>
+
+                  <div className="grid gap-2.5 sm:grid-cols-3">
+                    <div className="rounded-xl border border-white/80 bg-white/85 px-3 py-2.5 shadow-sm">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-gray">Available</p>
+                      <p className="mt-1.5 text-xl font-semibold text-zinc-950">{formatNumber(draftAvailable)}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/80 bg-white/85 px-3 py-2.5 shadow-sm">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-gray">Demand</p>
+                      <p className="mt-1.5 text-xl font-semibold text-zinc-950">{formatNumber(demandForDraft)}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/80 bg-white/85 px-3 py-2.5 shadow-sm">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-gray">Health</p>
+                      <p className="mt-1.5 text-xl font-semibold text-zinc-950">{draftHealth}</p>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.8fr)_360px]">
-              <div className="space-y-6">
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1.9fr)_300px]">
+              <div className="space-y-5">
                 <section className={sectionCardClass}>
                   <h4 className={sectionTitleClass}>Item</h4>
                   <p className={sectionDescriptionClass}>Core master data for the item number, description, category, location, and baseline card settings.</p>
@@ -1078,14 +1118,14 @@ export default function InventoryPage() {
                 </section>
               </div>
 
-              <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
-                <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-white shadow-[0_14px_40px_rgba(24,24,27,0.06)]">
-                  <div className="bg-[linear-gradient(135deg,#18181b,#32323a)] px-5 py-4 text-white">
+              <aside className="space-y-3.5 xl:sticky xl:top-24 xl:self-start">
+                <div className="overflow-hidden rounded-[22px] border border-zinc-200/80 bg-white shadow-[0_10px_26px_rgba(24,24,27,0.06)]">
+                  <div className="bg-[linear-gradient(135deg,#18181b,#32323a)] px-4 py-3 text-white">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">Item Snapshot</p>
-                    <p className="mt-2 text-2xl font-semibold">{draft.sku || "New Item"}</p>
+                    <p className="mt-1.5 text-xl font-semibold">{draft.sku || "New Item"}</p>
                     <p className="mt-1 text-sm text-white/75">{formatCurrency(itemValue)} current inventory value based on on-hand and unit cost.</p>
                   </div>
-                  <div className="space-y-3 px-5 py-5 text-sm">
+                  <div className="space-y-2.5 px-4 py-4 text-sm">
                     <div className="flex items-center justify-between gap-4">
                       <span className="text-brand-gray">Unit Cost</span>
                       <span className="font-semibold text-zinc-950">{formatCurrency(draft.unitCost)}</span>
@@ -1109,42 +1149,42 @@ export default function InventoryPage() {
                   </div>
                 </div>
 
-                <div className="rounded-[26px] border border-zinc-200/80 bg-white p-5 shadow-[0_14px_40px_rgba(24,24,27,0.06)]">
+                <div className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_26px_rgba(24,24,27,0.06)]">
                   <h5 className="text-base font-semibold text-zinc-950">Status</h5>
-                  <div className="mt-4 space-y-3 text-sm">
-                    <div className="flex items-center justify-between gap-4 rounded-2xl bg-zinc-50 px-4 py-3">
+                  <div className="mt-3 space-y-2.5 text-sm">
+                    <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-50 px-3.5 py-2.5">
                       <span className="text-brand-gray">Health</span>
                       <span className={`rounded-full px-3 py-1 text-xs font-semibold ${inventoryHealthStyles[draftHealth]}`}>
                         {draftHealth}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between gap-4 rounded-2xl bg-zinc-50 px-4 py-3">
+                    <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-50 px-3.5 py-2.5">
                       <span className="text-brand-gray">Blocked</span>
                       <span className="font-semibold text-zinc-950">{draft.blocked ? "Yes" : "No"}</span>
                     </div>
-                    <div className="flex items-center justify-between gap-4 rounded-2xl bg-zinc-50 px-4 py-3">
+                    <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-50 px-3.5 py-2.5">
                       <span className="text-brand-gray">Sales Blocked</span>
                       <span className="font-semibold text-zinc-950">{draft.salesBlocked ? "Yes" : "No"}</span>
                     </div>
-                    <div className="flex items-center justify-between gap-4 rounded-2xl bg-zinc-50 px-4 py-3">
+                    <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-50 px-3.5 py-2.5">
                       <span className="text-brand-gray">Purchasing Blocked</span>
                       <span className="font-semibold text-zinc-950">{draft.purchasingBlocked ? "Yes" : "No"}</span>
                     </div>
-                    <div className="flex items-center justify-between gap-4 rounded-2xl bg-zinc-50 px-4 py-3">
+                    <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-50 px-3.5 py-2.5">
                       <span className="text-brand-gray">Next Receipt</span>
                       <span className="font-semibold text-zinc-950">{draft.nextReceipt || "-"}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-[26px] border border-zinc-200/80 bg-white p-5 shadow-[0_14px_40px_rgba(24,24,27,0.06)]">
+                <div className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_26px_rgba(24,24,27,0.06)]">
                   <h5 className="text-base font-semibold text-zinc-950">Quick Stock Receipt</h5>
                   <p className="mt-2 text-sm leading-6 text-brand-gray">
                     {isEditMode
                       ? "Post a quick inventory receipt here while keeping the rest of the item card open for review."
                       : "Save the new item first, then you can post receipts directly inside this modal."}
                   </p>
-                  <div className="mt-4 space-y-3">
+                  <div className="mt-3 space-y-2.5">
                     <div>
                       <label className="text-sm font-medium text-zinc-950">Qty Received</label>
                       <Input className="mt-2 rounded-2xl" disabled={!isEditMode} min="1" onChange={(event) => setReceiptQuantity(event.target.value)} type="number" value={receiptQuantity} />
@@ -1153,29 +1193,6 @@ export default function InventoryPage() {
                       Post Receipt
                     </Button>
                   </div>
-                </div>
-
-                <div className="rounded-[26px] border border-zinc-200/80 bg-white p-5 shadow-[0_14px_40px_rgba(24,24,27,0.06)]">
-                  <h5 className="text-base font-semibold text-zinc-950">Actions</h5>
-                  <p className="mt-2 text-sm leading-6 text-brand-gray">
-                    {isEditMode
-                      ? "Review the loaded item values, save any updates, and use the receipt area when stock lands."
-                      : "Complete the key item card details first, then create the record to make it available for inventory operations."}
-                  </p>
-                  <div className="mt-5 flex flex-col gap-3">
-                    <Button className="w-full rounded-2xl bg-zinc-900 hover:bg-zinc-700 focus:ring-zinc-200" onClick={closeItemModal} type="button">
-                      Cancel
-                    </Button>
-                    <Button className="w-full rounded-2xl" disabled={!draft.sku.trim() || !draft.description.trim() || skuAlreadyExists} onClick={submitItem} type="button">
-                      {isEditMode ? "Save Changes" : "Create Item"}
-                    </Button>
-                  </div>
-                  {skuAlreadyExists ? (
-                    <p className="mt-3 text-xs leading-5 text-amber-700">This item number already exists. Use a unique No. before creating the record.</p>
-                  ) : null}
-                  {isEditMode && hasUnsavedChanges ? (
-                    <p className="mt-3 text-xs leading-5 text-brand-gray">There are unsaved changes in this item card.</p>
-                  ) : null}
                 </div>
               </aside>
             </div>

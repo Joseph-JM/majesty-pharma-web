@@ -4,8 +4,13 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { BusinessProvider } from "@/components/BusinessProvider";
 
 export const metadata: Metadata = {
-  title: "Minimal RBAC Admin",
-  description: "Minimal and professional Next.js RBAC starter",
+  title: "Majesty Pharma ERP",
+  description: "Majesty Pharma ERP for sales, inventory, customer management, and approvals.",
+  icons: {
+    icon: "/majesty-pharma-icon.svg",
+    shortcut: "/majesty-pharma-icon.svg",
+    apple: "/majesty-pharma-icon.svg",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

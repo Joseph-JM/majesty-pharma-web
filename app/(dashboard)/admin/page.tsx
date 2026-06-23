@@ -689,13 +689,13 @@ export default function AdminPage() {
           onClose={closeRoleModal}
           title={roleModalMode === "create" ? "Create Role" : roleModalMode === "edit" ? "Edit Role" : "View Role"}
         >
-          <div className="space-y-6">
-            <div className="grid gap-6 xl:grid-cols-[0.95fr,1.05fr]">
-              <section className="rounded-[26px] border border-zinc-200/80 bg-white p-5 shadow-[0_14px_40px_rgba(24,24,27,0.05)] sm:p-6">
+          <div className="space-y-5">
+            <div className="grid gap-5 xl:grid-cols-[0.95fr,1.05fr]">
+              <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_26px_rgba(24,24,27,0.05)] sm:p-5">
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <h4 className="text-lg font-semibold tracking-tight text-zinc-950">Role Setup</h4>
-                    <p className="mt-1 text-sm leading-6 text-brand-gray">Basic identity and purpose for this role definition.</p>
+                    <p className="mt-1 text-sm leading-5 text-brand-gray">Basic identity and purpose for this role definition.</p>
                   </div>
                   <span className={roleDraft.isSystem
                     ? "rounded-full bg-zinc-900 px-3 py-1 text-xs font-semibold text-white"
@@ -705,11 +705,11 @@ export default function AdminPage() {
                   </span>
                 </div>
 
-                <div className="mt-5 grid gap-4">
+                <div className="mt-4 grid gap-3.5">
                   <div>
                     <label className="text-sm font-medium text-zinc-950">Role Code</label>
                     <input
-                      className="mt-2 h-11 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-brand-red focus:ring-4 focus:ring-red-50 disabled:bg-zinc-50 disabled:text-zinc-500"
+                      className="mt-2 h-10 w-full rounded-xl border border-zinc-200 bg-white px-3.5 text-sm text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-brand-red focus:ring-4 focus:ring-red-50 disabled:bg-zinc-50 disabled:text-zinc-500"
                       disabled={roleModalMode !== "create"}
                       onChange={(event) => {
                         setRoleDraft((current) => ({ ...current, key: event.target.value }));
@@ -728,7 +728,7 @@ export default function AdminPage() {
                   <div>
                     <label className="text-sm font-medium text-zinc-950">Role Name</label>
                     <input
-                      className="mt-2 h-11 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-brand-red focus:ring-4 focus:ring-red-50 disabled:bg-zinc-50 disabled:text-zinc-500"
+                      className="mt-2 h-10 w-full rounded-xl border border-zinc-200 bg-white px-3.5 text-sm text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-brand-red focus:ring-4 focus:ring-red-50 disabled:bg-zinc-50 disabled:text-zinc-500"
                       disabled={roleModalMode === "view"}
                       onChange={(event) => {
                         setRoleDraft((current) => ({ ...current, label: event.target.value }));
@@ -742,7 +742,7 @@ export default function AdminPage() {
                   <div>
                     <label className="text-sm font-medium text-zinc-950">Description</label>
                     <textarea
-                      className="mt-2 min-h-[132px] w-full rounded-[24px] border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-brand-red focus:ring-4 focus:ring-red-50 disabled:bg-zinc-50 disabled:text-zinc-500"
+                      className="mt-2 min-h-[112px] w-full rounded-[20px] border border-zinc-200 bg-white px-3.5 py-3 text-sm text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-brand-red focus:ring-4 focus:ring-red-50 disabled:bg-zinc-50 disabled:text-zinc-500"
                       disabled={roleModalMode === "view"}
                       onChange={(event) => {
                         setRoleDraft((current) => ({ ...current, description: event.target.value }));
@@ -753,7 +753,7 @@ export default function AdminPage() {
                     />
                   </div>
 
-                  <div className="rounded-[24px] border border-zinc-200/80 bg-zinc-50/80 p-4">
+                  <div className="rounded-[20px] border border-zinc-200/80 bg-zinc-50/80 p-3.5">
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-gray">Current Scope</p>
                     <div className="mt-3 flex items-center justify-between gap-4">
                       <span className="text-sm text-brand-gray">Assigned permissions</span>
@@ -769,18 +769,18 @@ export default function AdminPage() {
                 </div>
               </section>
 
-              <section className="rounded-[26px] border border-zinc-200/80 bg-white p-5 shadow-[0_14px_40px_rgba(24,24,27,0.05)] sm:p-6">
+              <section className="rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_10px_26px_rgba(24,24,27,0.05)] sm:p-5">
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <h4 className="text-lg font-semibold tracking-tight text-zinc-950">Permissions</h4>
-                    <p className="mt-1 text-sm leading-6 text-brand-gray">Choose the modules and workflow actions this role can access.</p>
+                    <p className="mt-1 text-sm leading-5 text-brand-gray">Choose the modules and workflow actions this role can access.</p>
                   </div>
                   <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-brand-red">
                     {roleDraft.permissions.length} selected
                   </span>
                 </div>
 
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
                   {permissionRows.map((permissionRow) => {
                     const isSelected = roleDraft.permissions.includes(permissionRow.permission);
 
@@ -788,8 +788,8 @@ export default function AdminPage() {
                       <label
                         key={permissionRow.permission}
                         className={isSelected
-                          ? "flex min-h-[108px] cursor-pointer flex-col rounded-[24px] border border-red-200 bg-red-50/80 p-4 transition"
-                          : "flex min-h-[108px] cursor-pointer flex-col rounded-[24px] border border-zinc-200 bg-zinc-50/70 p-4 transition hover:border-zinc-300 hover:bg-white"}
+                          ? "flex min-h-[92px] cursor-pointer flex-col rounded-[20px] border border-red-200 bg-red-50/80 p-3.5 transition"
+                          : "flex min-h-[92px] cursor-pointer flex-col rounded-[20px] border border-zinc-200 bg-zinc-50/70 p-3.5 transition hover:border-zinc-300 hover:bg-white"}
                       >
                         <div className="flex items-start gap-3">
                           <input
@@ -811,7 +811,7 @@ export default function AdminPage() {
               </section>
             </div>
 
-            <div className="flex flex-col gap-4 rounded-[24px] border border-zinc-200/80 bg-zinc-50/70 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3.5 rounded-[20px] border border-zinc-200/80 bg-zinc-50/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-semibold text-zinc-950">
                   {roleModalMode === "view"
@@ -824,7 +824,7 @@ export default function AdminPage() {
               </div>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <button
-                  className="inline-flex h-11 items-center justify-center rounded-2xl bg-white px-5 text-sm font-semibold text-zinc-900 ring-1 ring-inset ring-zinc-200 transition hover:bg-zinc-50"
+                  className="inline-flex h-10 items-center justify-center rounded-xl bg-white px-4 text-sm font-semibold text-zinc-900 ring-1 ring-inset ring-zinc-200 transition hover:bg-zinc-50"
                   onClick={closeRoleModal}
                   type="button"
                 >
@@ -832,7 +832,7 @@ export default function AdminPage() {
                 </button>
                 {roleModalMode === "view" && selectedRoleDefinition ? (
                   <button
-                    className="inline-flex h-11 items-center justify-center rounded-2xl bg-brand-red px-5 text-sm font-semibold text-white transition hover:bg-red-700"
+                    className="inline-flex h-10 items-center justify-center rounded-xl bg-brand-red px-4 text-sm font-semibold text-white transition hover:bg-red-700"
                     onClick={() => openRoleModal(selectedRoleDefinition, "edit")}
                     type="button"
                   >
@@ -841,7 +841,7 @@ export default function AdminPage() {
                 ) : null}
                 {roleModalMode !== "view" ? (
                   <button
-                    className="inline-flex h-11 items-center justify-center rounded-2xl bg-brand-red px-5 text-sm font-semibold text-white transition hover:bg-red-700"
+                    className="inline-flex h-10 items-center justify-center rounded-xl bg-brand-red px-4 text-sm font-semibold text-white transition hover:bg-red-700"
                     onClick={saveRoleDraft}
                     type="button"
                   >
