@@ -41,6 +41,23 @@ const permissionRows = [
   { permission: "sales-orders:approve", label: "Approve and release Sales Order requests" },
   { permission: "settings:view", label: "Open system settings" },
   { permission: "settings:edit", label: "Edit system settings" },
+  { permission: "warehouse:view", label: "Open Warehouse module" },
+  { permission: "receiving:view", label: "Open Receiving (inbound) workspace" },
+  { permission: "receiving:manage", label: "Create and post warehouse receipts and put-aways" },
+  { permission: "shipping:view", label: "View warehouse shipments" },
+  { permission: "shipping:manage", label: "Create warehouse shipments from sales orders" },
+  { permission: "picking:view", label: "Open Picking workspace" },
+  { permission: "picking:manage", label: "Pick items and post pick transactions" },
+  { permission: "checking:view", label: "Open Checking workspace" },
+  { permission: "checking:manage", label: "Check, pack, and post warehouse movements" },
+  { permission: "dispatch:view", label: "Open Dispatch workspace" },
+  { permission: "dispatch:manage", label: "Verify and post warehouse shipments" },
+  { permission: "replenishment:view", label: "Open Bin Replenishment worksheet" },
+  { permission: "replenishment:manage", label: "Generate and register replenishment movements" },
+  { permission: "movements:view", label: "Open Internal Movement workspace" },
+  { permission: "movements:manage", label: "Create and register internal movements" },
+  { permission: "returns:view", label: "Open Returns workspace" },
+  { permission: "returns:manage", label: "Process customer and vendor returns" },
 ];
 
 const tabStyles: Record<AdminTab, string> = {

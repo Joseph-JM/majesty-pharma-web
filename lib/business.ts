@@ -1,3 +1,5 @@
+import { createInitialWarehouseState } from "./warehouse";
+
 export type SalesOrderStatus = "Open" | "Approval Request" | "Released" | "Post";
 
 export type SalesOrderLine = {
@@ -1180,6 +1182,7 @@ export function createInitialBusinessState() {
     customers: createInitialCustomers(),
     inventoryItems: createInitialInventoryItems(),
     activityLog: [...initialRecentBusinessActivity],
+    ...createInitialWarehouseState(),
   };
 }
 

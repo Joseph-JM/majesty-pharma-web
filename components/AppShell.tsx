@@ -3,28 +3,50 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, useState, useRef, useEffect } from "react";
 import clsx from "clsx";
+import { BellIcon, UserCircleIcon } from "@heroicons/react/24/outline";
 import {
   canAccess,
   getServerRoleDefinitionsSnapshot,
   readRoleDefinitionsSnapshot,
   subscribeToRoleDefinitionStore,
+  systemRoleOrder,
   type Role,
 } from "@/lib/auth";
 import { navItems, roleLabels } from "@/lib/nav";
 import { useAuth } from "./AuthProvider";
 
+const notifications = [
+  { id: 1, title: "New sales order submitted", body: "SO-2024-0091 is pending your approval.", time: "2m ago", unread: true },
+  { id: 2, title: "Inventory low stock alert", body: "Amoxicillin 500mg is below reorder level.", time: "1h ago", unread: true },
+  { id: 3, title: "Customer record updated", body: "MedSupply Co. contact details were changed.", time: "3h ago", unread: false },
+  { id: 4, title: "Monthly report ready", body: "June 2025 sales report is available for review.", time: "Yesterday", unread: false },
+];
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout, switchRole } = useAuth();
+  const [bellOpen, setBellOpen] = useState(false);
+  const bellRef = useRef<HTMLDivElement>(null);
 
   useSyncExternalStore(subscribeToRoleDefinitionStore, readRoleDefinitionsSnapshot, getServerRoleDefinitionsSnapshot);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
+        setBellOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   if (!user) return <>{children}</>;
 
   const visibleNav = navItems.filter((item) => canAccess(user.role, item.permission));
+  const unreadCount = notifications.filter((n) => n.unread).length;
 
   return (
     <div className="min-h-screen bg-[#f7f7f6] text-zinc-950">
@@ -64,15 +86,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-gray">Signed in as</p>
           <p className="mt-2 text-sm font-semibold text-zinc-950">{user.name}</p>
           <p className="text-xs text-brand-gray">{roleLabels[user.role]}</p>
-          <button
-            onClick={() => {
-              logout();
-              router.replace("/login");
-            }}
-            className="mt-4 text-sm font-semibold text-brand-red"
-          >
-            Logout
-          </button>
+          <div className="mt-4 flex items-center gap-4">
+            <Link href="/profile" className="text-sm font-semibold text-zinc-950 hover:text-brand-red transition">
+              Profile
+            </Link>
+            <button
+              onClick={() => {
+                logout();
+                router.replace("/login");
+              }}
+              className="text-sm font-semibold text-brand-red"
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -93,15 +120,87 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-gold">Workspace</p>
               <h1 className="text-xl font-semibold text-zinc-950">Welcome back, {user.name}</h1>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              {/* Notification bell */}
+              <div ref={bellRef} className="relative">
+                <button
+                  onClick={() => setBellOpen((o) => !o)}
+                  className={clsx(
+                    "relative flex h-10 w-10 items-center justify-center rounded-xl border transition",
+                    bellOpen
+                      ? "border-brand-red bg-red-50 text-brand-red"
+                      : "border-zinc-200 bg-white text-brand-gray hover:text-zinc-950",
+                  )}
+                  aria-label="Notifications"
+                >
+                  <BellIcon className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand-red text-[10px] font-bold text-white">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {bellOpen && (
+                  <div className="absolute right-0 top-12 z-50 w-80 rounded-2xl border border-zinc-200 bg-white shadow-xl">
+                    <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
+                      <p className="text-sm font-semibold text-zinc-950">Notifications</p>
+                      {unreadCount > 0 && (
+                        <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-brand-red">
+                          {unreadCount} new
+                        </span>
+                      )}
+                    </div>
+                    <ul className="divide-y divide-zinc-100">
+                      {notifications.map((n) => (
+                        <li key={n.id} className={clsx("px-4 py-3", n.unread && "bg-red-50/40")}>
+                          <div className="flex items-start gap-3">
+                            {n.unread && (
+                              <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand-red" />
+                            )}
+                            {!n.unread && <span className="mt-1.5 h-2 w-2 shrink-0" />}
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-zinc-950">{n.title}</p>
+                              <p className="mt-0.5 text-xs text-brand-gray">{n.body}</p>
+                              <p className="mt-1 text-[11px] text-zinc-400">{n.time}</p>
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="border-t border-zinc-100 px-4 py-3">
+                      <button className="text-xs font-semibold text-brand-red hover:underline">
+                        Mark all as read
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Profile icon */}
+              <Link
+                href="/profile"
+                className={clsx(
+                  "flex h-10 w-10 items-center justify-center rounded-xl border transition",
+                  pathname === "/profile"
+                    ? "border-brand-red bg-red-50 text-brand-red"
+                    : "border-zinc-200 bg-white text-brand-gray hover:text-zinc-950",
+                )}
+                aria-label="Profile"
+              >
+                <UserCircleIcon className="h-5 w-5" />
+              </Link>
+
               <select
                 value={user.role}
                 onChange={(event) => switchRole(event.target.value as Role)}
                 className="h-10 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-brand-gray outline-none focus:border-brand-red"
               >
-                <option value="systemAdmin">System Admin</option>
-                <option value="approver">Approver</option>
-                <option value="salesOrder">Sales Order</option>
+                {systemRoleOrder.map((role) => (
+                  <option key={role} value={role}>
+                    {roleLabels[role]}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

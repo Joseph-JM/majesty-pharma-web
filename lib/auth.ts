@@ -1,4 +1,4 @@
-export type Role = "systemAdmin" | "approver" | "salesOrder";
+export type Role = "systemAdmin" | "approver" | "salesOrder" | "picker" | "checker" | "dispatch";
 
 export type User = {
   id: string;
@@ -25,7 +25,7 @@ export type RoleDefinition = {
 const ROLE_DEFINITIONS_STORAGE_KEY = "minimal-rbac-role-definitions";
 const roleDefinitionListeners = new Set<() => void>();
 
-export const systemRoleOrder: Role[] = ["systemAdmin", "approver", "salesOrder"];
+export const systemRoleOrder: Role[] = ["systemAdmin", "approver", "salesOrder", "picker", "checker", "dispatch"];
 
 export const demoUsers: Record<Role, User> = {
   systemAdmin: {
@@ -64,6 +64,42 @@ export const demoUsers: Record<Role, User> = {
     mobileNo: "0917-800-1003",
     location: "Quezon City",
   },
+  picker: {
+    id: "u-004",
+    name: "Warehouse Picker",
+    email: "picker@company.com",
+    role: "picker",
+    department: "Warehouse",
+    jobTitle: "Warehouse Picker",
+    employeeNo: "EMP-004",
+    phoneNo: "02-8812-1004",
+    mobileNo: "0917-800-1004",
+    location: "Main Warehouse",
+  },
+  checker: {
+    id: "u-005",
+    name: "Warehouse Checker",
+    email: "checker@company.com",
+    role: "checker",
+    department: "Warehouse",
+    jobTitle: "Warehouse Checker",
+    employeeNo: "EMP-005",
+    phoneNo: "02-8812-1005",
+    mobileNo: "0917-800-1005",
+    location: "Main Warehouse",
+  },
+  dispatch: {
+    id: "u-006",
+    name: "Dispatch Team Lead",
+    email: "dispatch@company.com",
+    role: "dispatch",
+    department: "Warehouse",
+    jobTitle: "Dispatch Coordinator",
+    employeeNo: "EMP-006",
+    phoneNo: "02-8812-1006",
+    mobileNo: "0917-800-1006",
+    location: "Main Warehouse",
+  },
 };
 
 export const rolePermissions: Record<Role, string[]> = {
@@ -78,6 +114,23 @@ export const rolePermissions: Record<Role, string[]> = {
     "sales-orders:approve",
     "customers:view",
     "inventory:view",
+    "warehouse:view",
+    "receiving:view",
+    "receiving:manage",
+    "shipping:view",
+    "shipping:manage",
+    "picking:view",
+    "picking:manage",
+    "checking:view",
+    "checking:manage",
+    "dispatch:view",
+    "dispatch:manage",
+    "replenishment:view",
+    "replenishment:manage",
+    "movements:view",
+    "movements:manage",
+    "returns:view",
+    "returns:manage",
   ],
   approver: [
     "dashboard:view",
@@ -96,6 +149,27 @@ export const rolePermissions: Record<Role, string[]> = {
     "sales-orders:manage",
     "customers:view",
     "inventory:view",
+  ],
+  picker: [
+    "dashboard:view",
+    "profile:view",
+    "warehouse:view",
+    "picking:view",
+    "picking:manage",
+  ],
+  checker: [
+    "dashboard:view",
+    "profile:view",
+    "warehouse:view",
+    "checking:view",
+    "checking:manage",
+  ],
+  dispatch: [
+    "dashboard:view",
+    "profile:view",
+    "warehouse:view",
+    "dispatch:view",
+    "dispatch:manage",
   ],
 };
 
@@ -123,6 +197,30 @@ export const defaultRoleDefinitions: RoleDefinition[] = [
     permissions: [...rolePermissions.salesOrder],
     isSystem: true,
     linkedRole: "salesOrder",
+  },
+  {
+    key: "picker",
+    label: "Picker",
+    description: "Picks items from assigned bins for warehouse shipments and moves them to the Checking Area.",
+    permissions: [...rolePermissions.picker],
+    isSystem: true,
+    linkedRole: "picker",
+  },
+  {
+    key: "checker",
+    label: "Checker",
+    description: "Verifies item, quantity, and quality, packs goods, and moves them to the Pre-Dispatch Area.",
+    permissions: [...rolePermissions.checker],
+    isSystem: true,
+    linkedRole: "checker",
+  },
+  {
+    key: "dispatch",
+    label: "Dispatch Team",
+    description: "Verifies shipment completeness, loads goods to the delivery vehicle, and posts warehouse shipments.",
+    permissions: [...rolePermissions.dispatch],
+    isSystem: true,
+    linkedRole: "dispatch",
   },
 ];
 
@@ -266,6 +364,9 @@ export function canAccess(role: Role, permission: string) {
 export function normalizeRole(role: string | undefined): Role {
   if (role === "admin" || role === "systemAdmin") return "systemAdmin";
   if (role === "approver") return "approver";
+  if (role === "picker") return "picker";
+  if (role === "checker") return "checker";
+  if (role === "dispatch") return "dispatch";
   if (role === "user" || role === "salesOrder") return "salesOrder";
   return "salesOrder";
 }
