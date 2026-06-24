@@ -108,13 +108,14 @@ export type WarehousePutAway = {
 // ---------------------------------------------------------------------------
 
 export type ShipmentSourceType = "Sales" | "PurchaseReturn";
-export type WarehouseShipmentStatus = "Open" | "Picked" | "Checked" | "Shipped";
+export type WarehouseShipmentStatus = "Open" | "Picking" | "Picked" | "Checked" | "Shipped";
 
 export type WarehouseShipmentLine = {
   sku: string;
   description: string;
   qty: number;
   fromBin: string;
+  pickedQty: number;
 };
 
 export type WarehouseShipment = {
@@ -431,6 +432,7 @@ export function normalizeWarehouseShipment(shipment: Partial<WarehouseShipment>)
       description: line.description ?? line.sku ?? "Item",
       qty: line.qty ?? 0,
       fromBin: line.fromBin ?? "PICK",
+      pickedQty: line.pickedQty ?? 0,
     })),
   };
 }

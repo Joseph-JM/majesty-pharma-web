@@ -127,6 +127,8 @@ type BusinessContextValue = {
   postWarehouseReceipt: (receiptId: string) => void;
   postPutAway: (putAwayId: string) => void;
   createShipmentFromSalesOrder: (orderId: string) => void;
+  startPickForOrder: (orderId: string, actor: WarehouseActor) => void;
+  registerPickedQty: (shipmentId: string, pickedLines: { sku: string; pickedQty: number }[]) => void;
   postPick: (shipmentId: string, actor: WarehouseActor) => void;
   postChecking: (shipmentId: string, actor: WarehouseActor) => void;
   postShipment: (shipmentId: string, actor: WarehouseActor) => void;
@@ -350,7 +352,8 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
           prepaymentPaymentDiscountPercent: input.prepaymentPaymentDiscountPercent,
           prepaymentPaymentDiscountDate: input.prepaymentPaymentDiscountDate,
           salesperson: input.salesperson,
-          status: "Open",
+          status: input.initialStatus ?? "Open",
+          approvalReasons: input.approvalReasons ?? [],
           lines: input.lines.map((line) => {
             const item = current.inventoryItems.find((inventoryItem) => inventoryItem.sku === line.sku);
             return {
@@ -366,8 +369,6 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
             };
           }),
         };
-
-        nextOrder.status = "Open";
 
         return {
           ...current,
@@ -809,6 +810,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
             description: line.description,
             qty: line.quantity,
             fromBin: "PICK",
+            pickedQty: 0,
           })),
         });
 
@@ -819,13 +821,73 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         };
       });
     },
+    startPickForOrder: (orderId, actor) => {
+      updateBusinessState((current) => {
+        const order = current.salesOrders.find((so) => so.id === orderId);
+        if (!order || order.status !== "Released") return current;
+        if (current.warehouseShipments.some((ws) => ws.sourceType === "Sales" && ws.sourceId === orderId && ws.status !== "Shipped")) return current;
+
+        const id = getNextShipmentId(current.warehouseShipments);
+        const dispatchSchedule = resolveDispatchSchedule();
+        const shipment = normalizeWarehouseShipment({
+          id,
+          sourceType: "Sales",
+          sourceId: orderId,
+          partyName: order.customerName,
+          shipmentDate: toISODate(),
+          locationCode: order.locationCode,
+          status: "Picking",
+          dispatchSchedule,
+          pickerId: actor.id,
+          pickerName: actor.name,
+          pickedAt: toISODate(),
+          lines: order.lines.map((line) => ({
+            sku: line.sku,
+            description: line.description,
+            qty: line.quantity,
+            fromBin: "PICK",
+            pickedQty: 0,
+          })),
+        });
+
+        return {
+          ...current,
+          warehouseShipments: [shipment, ...current.warehouseShipments],
+          activityLog: addActivity(current.activityLog, `Pick ${id} started for ${orderId} by ${actor.name} — pick list generated`),
+        };
+      });
+    },
+    registerPickedQty: (shipmentId, pickedLines) => {
+      updateBusinessState((current) => {
+        let changed = false;
+        const warehouseShipments = current.warehouseShipments.map((shipment) => {
+          if (shipment.id !== shipmentId || shipment.status !== "Picking") return shipment;
+          changed = true;
+          return {
+            ...shipment,
+            lines: shipment.lines.map((line) => {
+              const pick = pickedLines.find((p) => p.sku === line.sku);
+              return pick ? { ...line, pickedQty: pick.pickedQty } : line;
+            }),
+          };
+        });
+
+        if (!changed) return current;
+
+        return {
+          ...current,
+          warehouseShipments,
+          activityLog: addActivity(current.activityLog, `Picked quantities registered for shipment ${shipmentId}`),
+        };
+      });
+    },
     postPick: (shipmentId, actor) => {
       updateBusinessState((current) => {
         let changed = false;
         const warehouseShipments = current.warehouseShipments.map((shipment) => {
-          if (shipment.id !== shipmentId || shipment.status !== "Open") return shipment;
+          if (shipment.id !== shipmentId || shipment.status !== "Picking") return shipment;
           changed = true;
-          return { ...shipment, status: "Picked" as const, pickerId: actor.id, pickerName: actor.name, pickedAt: toISODate() };
+          return { ...shipment, status: "Picked" as const };
         });
 
         if (!changed) return current;
@@ -1158,6 +1220,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
             description: line.description,
             qty: line.qty,
             fromBin: "BO-AREA",
+            pickedQty: 0,
           })),
         });
 

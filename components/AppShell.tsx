@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSyncExternalStore, useState, useRef, useEffect } from "react";
 import clsx from "clsx";
-import { BellIcon, UserCircleIcon } from "@heroicons/react/24/outline";
+import { BellIcon, UserCircleIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 import {
   canAccess,
   getServerRoleDefinitionsSnapshot,
@@ -14,7 +14,7 @@ import {
   systemRoleOrder,
   type Role,
 } from "@/lib/auth";
-import { navItems, roleLabels } from "@/lib/nav";
+import { navGroups, roleLabels } from "@/lib/nav";
 import { useAuth } from "./AuthProvider";
 
 const notifications = [
@@ -28,8 +28,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout, switchRole } = useAuth();
+
   const [bellOpen, setBellOpen] = useState(false);
   const bellRef = useRef<HTMLDivElement>(null);
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(
+    () => navGroups.find((group) => group.items.some((item) => item.href === pathname))?.label ?? null,
+  );
+  const [prevPathname, setPrevPathname] = useState(pathname);
 
   useSyncExternalStore(subscribeToRoleDefinitionStore, readRoleDefinitionsSnapshot, getServerRoleDefinitionsSnapshot);
 
@@ -45,11 +50,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (!user) return <>{children}</>;
 
-  const visibleNav = navItems.filter((item) => canAccess(user.role, item.permission));
+  const visibleNavGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => canAccess(user.role, item.permission)),
+    }))
+    .filter((group) => group.items.length > 0);
+
+  // When the route changes, open the group that contains it (accordion: one open at a time)
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
+    const activeGroup = visibleNavGroups.find((group) =>
+      group.items.some((item) => item.href === pathname),
+    );
+    if (activeGroup) {
+      setExpandedGroup(activeGroup.label);
+    }
+  }
+
   const unreadCount = notifications.filter((n) => n.unread).length;
 
   return (
-    <div className="min-h-screen bg-[#f7f7f6] text-zinc-950">
+    <div className="h-screen overflow-hidden bg-[#f7f7f6] text-zinc-950">
       <aside className="fixed inset-y-0 left-0 hidden w-72 border-r border-zinc-200 bg-white p-6 lg:block">
         <div className="flex items-center gap-3">
           <div>
@@ -66,20 +88,47 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="mt-10 space-y-2">
-          {visibleNav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={clsx(
-                "flex items-center rounded-xl px-4 py-3 text-sm font-medium transition",
-                pathname === item.href
-                  ? "bg-red-50 text-brand-red"
-                  : "text-brand-gray hover:bg-zinc-50 hover:text-zinc-950",
-              )}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {visibleNavGroups.map((group) => {
+            const isExpanded = expandedGroup === group.label;
+            const toggleGroup = () => {
+              setExpandedGroup((prev) => (prev === group.label ? null : group.label));
+            };
+
+            return (
+              <div key={group.label}>
+                <button
+                  onClick={toggleGroup}
+                  className="w-full flex items-center justify-between px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-brand-gray hover:text-zinc-950 transition rounded-xl hover:bg-zinc-50"
+                >
+                  <span>{group.label}</span>
+                  <ChevronDownIcon
+                    className={clsx(
+                      "h-4 w-4 transition-transform duration-200",
+                      isExpanded ? "rotate-0" : "-rotate-90"
+                    )}
+                  />
+                </button>
+                {isExpanded && (
+                  <div className="space-y-1 mt-1 overflow-hidden animate-in fade-in duration-200">
+                    {group.items.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={clsx(
+                          "flex items-center rounded-xl px-4 py-3 text-sm font-medium transition",
+                          pathname === item.href
+                            ? "bg-red-50 text-brand-red"
+                            : "text-brand-gray hover:bg-zinc-50 hover:text-zinc-950",
+                        )}
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
 
         <div className="absolute bottom-6 left-6 right-6 rounded-2xl bg-zinc-50 p-4">
@@ -103,8 +152,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <main className="lg:pl-72">
-        <header className="sticky top-0 z-10 border-b border-zinc-200 bg-white/90 px-5 py-4 backdrop-blur lg:px-8">
+      <main className="flex h-full flex-col lg:pl-72">
+        <header className="shrink-0 border-b border-zinc-200 bg-white/90 px-5 py-4 backdrop-blur lg:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="lg:hidden">
@@ -205,7 +254,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </header>
-        <div className="p-5 lg:p-8">{children}</div>
+        <div className="flex-1 overflow-y-auto p-5 lg:p-8">{children}</div>
       </main>
     </div>
   );

@@ -109,6 +109,7 @@ export default function CustomersPage() {
   const { createCustomer, customerSummary, customers, updateCustomer } = useBusiness();
 
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [isSyncConfirmOpen, setIsSyncConfirmOpen] = useState(false);
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [blockedFilter, setBlockedFilter] = useState<"All" | Customer["blocked"]>("All");
@@ -172,6 +173,11 @@ export default function CustomersPage() {
   }
 
   function openCreateModal() {
+    setIsSyncConfirmOpen(true);
+  }
+
+  function confirmSync() {
+    setIsSyncConfirmOpen(false);
     resetDraft();
     setIsCustomerModalOpen(true);
   }
@@ -257,7 +263,7 @@ export default function CustomersPage() {
                   {formatNumber(customers.length)} customer records
                 </div>
                 <Button onClick={openCreateModal} type="button">
-                  Create Customer
+                  Sync Customer
                 </Button>
               </div>
             </div>
@@ -957,6 +963,28 @@ export default function CustomersPage() {
                 </div>
               </aside>
             </div>
+          </div>
+        </Modal>
+
+        <Modal
+          description="A new customer record will be created and synced into the system. This action cannot be undone without manually removing the record."
+          eyebrow="Customer Workspace"
+          isOpen={isSyncConfirmOpen}
+          onClose={() => setIsSyncConfirmOpen(false)}
+          size="sm"
+          title="Sync Customer"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+            <Button
+              className="rounded-2xl bg-zinc-900 hover:bg-zinc-700 focus:ring-zinc-200"
+              onClick={() => setIsSyncConfirmOpen(false)}
+              type="button"
+            >
+              Cancel
+            </Button>
+            <Button className="rounded-2xl" onClick={confirmSync} type="button">
+              Proceed
+            </Button>
           </div>
         </Modal>
       </>

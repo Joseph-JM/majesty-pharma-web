@@ -17,6 +17,7 @@ export type SalesOrderLine = {
 export type SalesOrder = {
   id: string;
   customerName: string;
+  approvalReasons?: string[];
   contact: string;
   documentDate: string;
   postingDate: string;
@@ -209,7 +210,11 @@ export type SalesOrderLineInput = {
   reservedQty?: number;
 };
 
+export const MIN_GROSS_PROFIT_PERCENT = 20;
+
 export type CreateSalesOrderInput = {
+  initialStatus?: SalesOrderStatus;
+  approvalReasons?: string[];
   customerName: string;
   contact: string;
   documentDate: string;
@@ -1283,6 +1288,7 @@ export function normalizeSalesOrderRecord(order: Partial<SalesOrder> & { custome
     salesperson: order.salesperson ?? "Unassigned",
     status: normalizeSalesOrderStatus(order.status),
     lines: (order.lines ?? []).map((line) => normalizeSalesOrderLineRecord(line, locationCode)),
+    approvalReasons: order.approvalReasons,
   } satisfies SalesOrder;
 }
 

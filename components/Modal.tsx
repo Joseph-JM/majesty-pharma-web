@@ -8,11 +8,12 @@ type ModalProps = {
   description?: string;
   eyebrow?: string;
   allowFullscreen?: boolean;
+  size?: "sm" | "md" | "default";
   onClose: () => void;
   children: ReactNode;
 };
 
-export function Modal({ isOpen, title, description, eyebrow = "Workspace", allowFullscreen = false, onClose, children }: ModalProps) {
+export function Modal({ isOpen, title, description, eyebrow = "Workspace", allowFullscreen = false, size = "default", onClose, children }: ModalProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const handleClose = useCallback(() => {
@@ -52,7 +53,7 @@ export function Modal({ isOpen, title, description, eyebrow = "Workspace", allow
         aria-labelledby="modal-title"
         className={`modal-scrollbar overflow-y-auto overscroll-contain bg-[#fcfbf8] shadow-[0_24px_90px_rgba(24,24,27,0.18)] ${isFullscreen
           ? "h-screen max-h-screen w-full max-w-none rounded-none border-0"
-          : "max-h-[90vh] w-full max-w-6xl rounded-[28px] border border-white/70"}`}
+          : `max-h-[90vh] w-full rounded-[28px] border border-white/70 ${size === "sm" ? "max-w-md" : size === "md" ? "max-w-3xl" : "max-w-7xl"}`}`}
         role="dialog"
         onClick={(event) => event.stopPropagation()}
       >

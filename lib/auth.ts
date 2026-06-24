@@ -112,6 +112,7 @@ export const rolePermissions: Record<Role, string[]> = {
     "sales-orders:view",
     "sales-orders:manage",
     "sales-orders:approve",
+    "for-approval:view",
     "customers:view",
     "inventory:view",
     "warehouse:view",
@@ -138,6 +139,7 @@ export const rolePermissions: Record<Role, string[]> = {
     "settings:view",
     "sales-orders:view",
     "sales-orders:approve",
+    "for-approval:view",
     "customers:view",
     "inventory:view",
   ],
@@ -359,6 +361,14 @@ export function getPermissionsForRole(role: Role | string) {
 
 export function canAccess(role: Role, permission: string) {
   return getPermissionsForRole(role).includes(permission);
+}
+
+export function getUserLocationCode(user: User): string | null {
+  if (user.role === "systemAdmin") return null;
+  const loc = user.location.toLowerCase();
+  if (loc.includes("cebu")) return "CEBU";
+  if (loc.includes("cold")) return "COLD";
+  return "MAIN";
 }
 
 export function normalizeRole(role: string | undefined): Role {

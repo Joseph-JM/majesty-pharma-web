@@ -11,6 +11,7 @@ import { RequireAuth } from "@/components/RequireAuth";
 import {
   canAccess,
   getServerRoleDefinitionsSnapshot,
+  getUserLocationCode,
   readRoleDefinitionsSnapshot,
   subscribeToRoleDefinitionStore,
 } from "@/lib/auth";
@@ -30,6 +31,7 @@ import {
   getSuggestedDueDate,
   getSuggestedUnitPrice,
   locationCodes,
+  MIN_GROSS_PROFIT_PERCENT,
   paymentServiceOptions,
   paymentTermsOptions,
   shipToOptions,
@@ -38,6 +40,8 @@ import {
   transactionTypeOptions,
   transportMethodOptions,
   vatBusinessPostingGroups,
+  type Customer,
+  type InventoryItem,
   type SalesOrder,
 } from "@/lib/business";
 
@@ -59,6 +63,76 @@ const sectionCardClass =
 
 const sectionTitleClass = "text-base font-semibold tracking-tight text-zinc-950";
 const sectionDescriptionClass = "mt-1 text-sm leading-5 text-brand-gray";
+
+const PICKER_PER_PAGE = 10;
+const LINES_PER_PAGE = 5;
+
+type ValidationResult = {
+  key: string;
+  label: string;
+  passed: boolean;
+  reason: string;
+};
+
+function runOrderValidations(
+  draft: SalesOrderDraft,
+  draftLines: DraftSalesOrderLine[],
+  customers: Customer[],
+  inventoryItems: InventoryItem[],
+  orderTotal: number,
+): ValidationResult[] {
+  const customer = customers.find((c) => c.name === draft.customerName);
+
+  const locationSet = new Set(draftLines.map((l) => l.locationCode));
+  const oneLocation = locationSet.size <= 1;
+
+  const availableCredit = customer && customer.creditLimitLcy > 0
+    ? Math.max(customer.creditLimitLcy - customer.balanceLcy, 0)
+    : null;
+  const withinCredit = availableCredit === null ? true : orderTotal <= availableCredit;
+
+  const priceNotModified = draftLines.every((line) => {
+    const item = inventoryItems.find((i) => i.sku === line.sku);
+    if (!item) return true;
+    return Math.abs(line.unitPrice - getSuggestedUnitPrice(item)) < 0.01;
+  });
+
+  const withinGP = draftLines.every((line) => {
+    const item = inventoryItems.find((i) => i.sku === line.sku);
+    if (!item) return true;
+    const gp = line.unitPrice > 0 ? ((line.unitPrice - item.unitCost) / line.unitPrice) * 100 : -Infinity;
+    return gp >= MIN_GROSS_PROFIT_PERCENT;
+  });
+
+  return [
+    {
+      key: "oneLocation",
+      label: "One Location",
+      passed: oneLocation,
+      reason: oneLocation ? "" : `Multiple locations used: ${[...locationSet].join(", ")}`,
+    },
+    {
+      key: "withinCredit",
+      label: "Within Credit Terms",
+      passed: withinCredit,
+      reason: withinCredit
+        ? ""
+        : `Order total ${formatCurrency(orderTotal)} exceeds available credit ${formatCurrency(availableCredit ?? 0)}`,
+    },
+    {
+      key: "priceNotModified",
+      label: "Unit Price Not Modified",
+      passed: priceNotModified,
+      reason: priceNotModified ? "" : "One or more lines have a modified unit price",
+    },
+    {
+      key: "withinGP",
+      label: `Within Gross Profit (≥${MIN_GROSS_PROFIT_PERCENT}%)`,
+      passed: withinGP,
+      reason: withinGP ? "" : `One or more lines fall below the ${MIN_GROSS_PROFIT_PERCENT}% minimum gross profit`,
+    },
+  ];
+}
 
 type DraftLine = {
   sku: string;
@@ -233,7 +307,7 @@ function hasOrderDraftChanges(order: SalesOrder | null, draft: SalesOrderDraft, 
 
 export default function SalesOrdersPage() {
   const { user } = useAuth();
-  const { createSalesOrder, updateSalesOrder, inventoryItems, reserveSalesOrder, salesOrders, salesOrderSummary, postSalesOrder } = useBusiness();
+  const { createSalesOrder, customers, updateSalesOrder, inventoryItems, reserveSalesOrder, salesOrders, salesOrderSummary, postSalesOrder } = useBusiness();
 
   useSyncExternalStore(subscribeToRoleDefinitionStore, readRoleDefinitionsSnapshot, getServerRoleDefinitionsSnapshot);
 
@@ -252,6 +326,14 @@ export default function SalesOrdersPage() {
     locationCode: locationCodes[0],
   });
   const [draftLines, setDraftLines] = useState<DraftSalesOrderLine[]>([]);
+  const [isItemPickerOpen, setIsItemPickerOpen] = useState(false);
+  const [itemPickerSearch, setItemPickerSearch] = useState("");
+  const [itemPickerLocation, setItemPickerLocation] = useState<"All" | string>("All");
+  const [itemPickerPage, setItemPickerPage] = useState(1);
+  const [isCustomerPickerOpen, setIsCustomerPickerOpen] = useState(false);
+  const [customerPickerSearch, setCustomerPickerSearch] = useState("");
+  const [customerPickerPage, setCustomerPickerPage] = useState(1);
+  const [linesPage, setLinesPage] = useState(1);
 
   const selectedSku = draftLine.sku || inventoryItems[0]?.sku || "";
   const selectedItem = inventoryItems.find((item) => item.sku === selectedSku);
@@ -264,11 +346,17 @@ export default function SalesOrdersPage() {
   const draftTotalExclVat = draftSubtotal - draftInvoiceDiscountAmount;
   const draftTotalVat = draftTotalExclVat * 0.12;
   const draftTotalInclVat = draftTotalExclVat + draftTotalVat;
+  const orderValidations = useMemo(() => {
+    if (editingOrderId || !draft.customerName.trim() || draftLines.length === 0) return [];
+    return runOrderValidations(draft, draftLines, customers, inventoryItems, draftTotalInclVat);
+  }, [customers, draft, draftLines, draftTotalInclVat, editingOrderId, inventoryItems]);
+  const orderNeedsApproval = orderValidations.some((v) => !v.passed);
   const editingOrder = editingOrderId ? salesOrders.find((order) => order.id === editingOrderId) ?? null : null;
   const isEditMode = Boolean(editingOrder);
   const isPostedView = editingOrder?.status === "Post";
   const canManageOrders = user ? canAccess(user.role, "sales-orders:manage") : false;
   const canApproveOrders = user ? canAccess(user.role, "sales-orders:approve") : false;
+  const userLocationCode = user ? getUserLocationCode(user) : null;
   const hasUnsavedChanges = hasOrderDraftChanges(editingOrder, draft, draftLines);
   const modalWorkflowActionLabel =
     editingOrder?.status === "Open"
@@ -285,7 +373,11 @@ export default function SalesOrdersPage() {
       : editingOrder?.status === "Released"
         ? canManageOrders
         : false;
-  const modalPrimaryActionLabel = editingOrder ? "Save Changes" : "Create Sales Order";
+  const modalPrimaryActionLabel = editingOrder
+    ? "Save Changes"
+    : orderNeedsApproval
+      ? "Create → For Approval"
+      : "Create Sales Order";
   const modalActionDescription = editingOrder
     ? isPostedView
       ? "This record can be reviewed in full here, but posted orders are locked from edits."
@@ -310,10 +402,11 @@ export default function SalesOrdersPage() {
 
       const matchesStatus = statusFilter === "All" || order.status === statusFilter;
       const matchesLocation = locationFilter === "All" || order.locationCode === locationFilter;
+      const matchesUserScope = !userLocationCode || order.locationCode === userLocationCode;
 
-      return matchesQuery && matchesStatus && matchesLocation;
+      return matchesQuery && matchesStatus && matchesLocation && matchesUserScope;
     });
-  }, [locationFilter, salesOrders, searchQuery, statusFilter]);
+  }, [locationFilter, salesOrders, searchQuery, statusFilter, userLocationCode]);
   const totalPages = Math.max(1, Math.ceil(filteredOrders.length / itemsPerPage));
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const paginatedOrders = useMemo(() => {
@@ -323,6 +416,32 @@ export default function SalesOrdersPage() {
   }, [filteredOrders, itemsPerPage, safeCurrentPage]);
   const pageStartItem = filteredOrders.length === 0 ? 0 : ((safeCurrentPage - 1) * itemsPerPage) + 1;
   const pageEndItem = filteredOrders.length === 0 ? 0 : Math.min(safeCurrentPage * itemsPerPage, filteredOrders.length);
+  const filteredPickerItems = useMemo(() => {
+    const q = itemPickerSearch.trim().toLowerCase();
+    return inventoryItems.filter((item) => {
+      const matchesSearch = !q || item.sku.toLowerCase().includes(q) || item.description.toLowerCase().includes(q);
+      const matchesLocation = itemPickerLocation === "All" || item.location === itemPickerLocation;
+      return matchesSearch && matchesLocation;
+    });
+  }, [inventoryItems, itemPickerSearch, itemPickerLocation]);
+  const safeItemPickerPage = Math.min(itemPickerPage, Math.max(1, Math.ceil(filteredPickerItems.length / PICKER_PER_PAGE)));
+  const paginatedPickerItems = filteredPickerItems.slice((safeItemPickerPage - 1) * PICKER_PER_PAGE, safeItemPickerPage * PICKER_PER_PAGE);
+  const totalItemPickerPages = Math.max(1, Math.ceil(filteredPickerItems.length / PICKER_PER_PAGE));
+
+  const filteredCustomerItems = useMemo(() => {
+    const q = customerPickerSearch.trim().toLowerCase();
+    if (!q) return customers;
+    return customers.filter(
+      (c) => c.name.toLowerCase().includes(q) || c.id.toLowerCase().includes(q) || c.city.toLowerCase().includes(q),
+    );
+  }, [customers, customerPickerSearch]);
+  const safeCustomerPage = Math.min(customerPickerPage, Math.max(1, Math.ceil(filteredCustomerItems.length / PICKER_PER_PAGE)));
+  const paginatedCustomerItems = filteredCustomerItems.slice((safeCustomerPage - 1) * PICKER_PER_PAGE, safeCustomerPage * PICKER_PER_PAGE);
+  const totalCustomerPages = Math.max(1, Math.ceil(filteredCustomerItems.length / PICKER_PER_PAGE));
+
+  const safeLinesPage = Math.min(linesPage, Math.max(1, Math.ceil(draftLines.length / LINES_PER_PAGE)));
+  const paginatedDraftLines = draftLines.slice((safeLinesPage - 1) * LINES_PER_PAGE, safeLinesPage * LINES_PER_PAGE);
+  const totalLinesPages = Math.max(1, Math.ceil(draftLines.length / LINES_PER_PAGE));
 
   function updateDraftField<Key extends keyof SalesOrderDraft>(field: Key, value: SalesOrderDraft[Key]) {
     setDraft((current) => ({
@@ -385,20 +504,34 @@ export default function SalesOrdersPage() {
     const unitPrice = Number(computedPrice);
     if (!quantity || quantity <= 0 || !unitPrice || unitPrice <= 0) return;
 
-    setDraftLines((current) => [
-      ...current,
-      {
-        type: "Item",
-        sku: selectedItem.sku,
-        itemReferenceNo: `REF-${selectedItem.sku.replace("ITEM-", "")}`,
-        description: selectedItem.description,
-        locationCode: draftLine.locationCode || draft.locationCode,
-        quantity,
-        qtyToShip: quantity,
-        reservedQty: 0,
-        unitPrice,
-      },
-    ]);
+    const locationCode = draftLine.locationCode || draft.locationCode;
+
+    setDraftLines((current) => {
+      const existingIndex = current.findIndex(
+        (l) => l.sku === selectedItem.sku && l.locationCode === locationCode,
+      );
+      if (existingIndex !== -1) {
+        return current.map((l, i) =>
+          i === existingIndex
+            ? { ...l, quantity: l.quantity + quantity, qtyToShip: l.qtyToShip + quantity }
+            : l,
+        );
+      }
+      return [
+        ...current,
+        {
+          type: "Item",
+          sku: selectedItem.sku,
+          itemReferenceNo: `REF-${selectedItem.sku.replace("ITEM-", "")}`,
+          description: selectedItem.description,
+          locationCode,
+          quantity,
+          qtyToShip: quantity,
+          reservedQty: 0,
+          unitPrice,
+        },
+      ];
+    });
     setDraftLine({
       sku: "",
       quantity: "1",
@@ -409,6 +542,26 @@ export default function SalesOrdersPage() {
 
   function removeDraftLine(index: number) {
     setDraftLines((current) => current.filter((_, currentIndex) => currentIndex !== index));
+  }
+
+  function selectPickerItem(item: import("@/lib/business").InventoryItem) {
+    setDraftLine((current) => ({
+      ...current,
+      sku: item.sku,
+      locationCode: item.location || current.locationCode,
+      unitPrice: String(getSuggestedUnitPrice(item)),
+    }));
+    setIsItemPickerOpen(false);
+    setItemPickerSearch("");
+    setItemPickerLocation("All");
+    setItemPickerPage(1);
+  }
+
+  function selectCustomerPickerItem(customer: import("@/lib/business").Customer) {
+    updateDraftField("customerName", customer.name);
+    setIsCustomerPickerOpen(false);
+    setCustomerPickerSearch("");
+    setCustomerPickerPage(1);
   }
 
   function submitOrder() {
@@ -508,6 +661,10 @@ export default function SalesOrdersPage() {
       prepaymentPaymentDiscountPercent: Number(draft.prepaymentPaymentDiscountPercent) || 0,
       prepaymentPaymentDiscountDate: draft.prepaymentPaymentDiscountDate,
       salesperson: user.name,
+      initialStatus: orderNeedsApproval ? "Approval Request" : "Open",
+      approvalReasons: orderNeedsApproval
+        ? orderValidations.filter((v) => !v.passed).map((v) => v.reason)
+        : [],
       lines: draftLines.map((line) => ({
         sku: line.sku,
         itemReferenceNo: line.itemReferenceNo,
@@ -567,7 +724,7 @@ export default function SalesOrdersPage() {
               </div>
             </div>
 
-            <div className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
+            <div className={`mt-6 grid gap-4 ${userLocationCode ? "xl:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))]" : "xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]"}`}>
               <div>
                 <label className="text-sm font-medium text-zinc-950">Search</label>
                 <Input
@@ -597,24 +754,26 @@ export default function SalesOrdersPage() {
                   <option value="Post">Post</option>
                 </select>
               </div>
-              <div>
-                <label className="text-sm font-medium text-zinc-950">Location</label>
-                <select
-                  className={toolbarSelectClass}
-                  onChange={(event) => {
-                    setLocationFilter(event.target.value as "All" | (typeof locationCodes)[number]);
-                    setCurrentPage(1);
-                  }}
-                  value={locationFilter}
-                >
-                  <option value="All">All Locations</option>
-                  {locationCodes.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {!userLocationCode && (
+                <div>
+                  <label className="text-sm font-medium text-zinc-950">Location</label>
+                  <select
+                    className={toolbarSelectClass}
+                    onChange={(event) => {
+                      setLocationFilter(event.target.value as "All" | (typeof locationCodes)[number]);
+                      setCurrentPage(1);
+                    }}
+                    value={locationFilter}
+                  >
+                    <option value="All">All Locations</option>
+                    {locationCodes.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="text-sm font-medium text-zinc-950">Rows Per Page</label>
                 <select
@@ -850,7 +1009,16 @@ export default function SalesOrdersPage() {
                   <div className="mt-5 grid gap-4 md:grid-cols-2">
                     <div>
                       <label className="text-sm font-medium text-zinc-950">Customer Name</label>
-                      <Input className="mt-2 rounded-2xl" value={draft.customerName} onChange={(event) => updateDraftField("customerName", event.target.value)} placeholder="Customer or branch name" />
+                      <button
+                        className="mt-2 flex h-10 w-full items-center rounded-xl border border-zinc-200 bg-white px-3.5 text-left text-sm text-zinc-950 outline-none transition hover:border-zinc-300 focus:border-brand-red focus:ring-4 focus:ring-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={isPostedView || !canManageOrders}
+                        onClick={() => setIsCustomerPickerOpen(true)}
+                        type="button"
+                      >
+                        {draft.customerName
+                          ? <span className="truncate">{draft.customerName}</span>
+                          : <span className="text-brand-gray">Browse customers...</span>}
+                      </button>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-zinc-950">Due Date</label>
@@ -928,17 +1096,15 @@ export default function SalesOrdersPage() {
                     <div className="grid gap-4 md:grid-cols-[1.45fr,0.9fr,0.8fr,0.8fr,auto]">
                       <div>
                         <label className="text-sm font-medium text-zinc-950">No.</label>
-                        <select
-                          value={selectedSku}
-                          onChange={(event) => setDraftLine((current) => ({ ...current, sku: event.target.value, unitPrice: "" }))}
-                          className={selectClass}
+                        <button
+                          className="mt-2 flex h-10 w-full items-center truncate rounded-xl border border-zinc-200 bg-white px-3.5 text-left text-sm text-zinc-950 outline-none transition hover:border-zinc-300 focus:border-brand-red focus:ring-4 focus:ring-red-50"
+                          onClick={() => setIsItemPickerOpen(true)}
+                          type="button"
                         >
-                          {inventoryItems.map((item) => (
-                            <option key={item.sku} value={item.sku}>
-                              {item.sku} - {item.description}
-                            </option>
-                          ))}
-                        </select>
+                          {selectedSku
+                            ? <span className="truncate">{selectedSku}{selectedItem ? ` — ${selectedItem.description}` : ""}</span>
+                            : <span className="text-brand-gray">Browse items...</span>}
+                        </button>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-zinc-950">Location Code</label>
@@ -1008,29 +1174,41 @@ export default function SalesOrdersPage() {
                               </td>
                             </tr>
                           ) : (
-                            draftLines.map((line, index) => (
-                              <tr key={`${line.sku}-${index}`} className="hover:bg-zinc-50/60">
-                                <td className="px-4 py-4 text-zinc-950">{line.type}</td>
-                                <td className="px-4 py-4 font-medium text-zinc-950">{line.sku}</td>
-                                <td className="px-4 py-4 text-brand-gray">{line.itemReferenceNo}</td>
-                                <td className="px-4 py-4 text-zinc-950">{line.description}</td>
-                                <td className="px-4 py-4 text-brand-gray">{line.locationCode}</td>
-                                <td className="px-4 py-4 text-right text-zinc-950">{formatNumber(line.quantity)}</td>
-                                <td className="px-4 py-4 text-right text-zinc-950">{formatNumber(line.qtyToShip)}</td>
-                                <td className="px-4 py-4 text-right text-zinc-950">{formatNumber(line.reservedQty)}</td>
-                                <td className="px-4 py-4 text-right text-zinc-950">{formatCurrency(line.unitPrice)}</td>
-                                <td className="px-4 py-4 text-right font-semibold text-zinc-950">{formatCurrency(line.quantity * line.unitPrice)}</td>
-                                <td className="px-4 py-4 text-right">
-                                  <button className="rounded-full px-3 py-1 text-sm font-semibold text-brand-red transition hover:bg-red-50" onClick={() => removeDraftLine(index)} type="button">
-                                    Remove
-                                  </button>
-                                </td>
-                              </tr>
-                            ))
+                            paginatedDraftLines.map((line, pageIndex) => {
+                              const index = (safeLinesPage - 1) * LINES_PER_PAGE + pageIndex;
+                              return (
+                                <tr key={`${line.sku}-${line.locationCode}`} className="hover:bg-zinc-50/60">
+                                  <td className="px-4 py-4 text-zinc-950">{line.type}</td>
+                                  <td className="px-4 py-4 font-medium text-zinc-950">{line.sku}</td>
+                                  <td className="px-4 py-4 text-brand-gray">{line.itemReferenceNo}</td>
+                                  <td className="px-4 py-4 text-zinc-950">{line.description}</td>
+                                  <td className="px-4 py-4 text-brand-gray">{line.locationCode}</td>
+                                  <td className="px-4 py-4 text-right text-zinc-950">{formatNumber(line.quantity)}</td>
+                                  <td className="px-4 py-4 text-right text-zinc-950">{formatNumber(line.qtyToShip)}</td>
+                                  <td className="px-4 py-4 text-right text-zinc-950">{formatNumber(line.reservedQty)}</td>
+                                  <td className="px-4 py-4 text-right text-zinc-950">{formatCurrency(line.unitPrice)}</td>
+                                  <td className="px-4 py-4 text-right font-semibold text-zinc-950">{formatCurrency(line.quantity * line.unitPrice)}</td>
+                                  <td className="px-4 py-4 text-right">
+                                    <button className="rounded-full px-3 py-1 text-sm font-semibold text-brand-red transition hover:bg-red-50" onClick={() => removeDraftLine(index)} type="button">
+                                      Remove
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })
                           )}
                         </tbody>
                       </table>
                     </div>
+                    {totalLinesPages > 1 && (
+                      <div className="flex items-center justify-between border-t border-zinc-100 px-4 py-3 text-sm text-brand-gray">
+                        <span>{formatNumber((safeLinesPage - 1) * LINES_PER_PAGE + 1)}–{formatNumber(Math.min(safeLinesPage * LINES_PER_PAGE, draftLines.length))} of {formatNumber(draftLines.length)} lines</span>
+                        <div className="flex items-center gap-2">
+                          <button className="rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium transition hover:bg-zinc-50 disabled:opacity-40" disabled={safeLinesPage === 1} onClick={() => setLinesPage((p) => Math.max(1, p - 1))} type="button">Prev</button>
+                          <button className="rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium transition hover:bg-zinc-50 disabled:opacity-40" disabled={safeLinesPage === totalLinesPages} onClick={() => setLinesPage((p) => Math.min(totalLinesPages, p + 1))} type="button">Next</button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </section>
 
@@ -1356,6 +1534,26 @@ export default function SalesOrdersPage() {
                       </div>
                     ) : null}
                   </div>
+                  {!editingOrder && orderValidations.length > 0 && (
+                    <div className="mt-3 border-t border-zinc-100 pt-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-gray">Order Checks</p>
+                      <div className="mt-2 space-y-2">
+                        {orderValidations.map((v) => (
+                          <div key={v.key} className="flex items-center justify-between gap-3 rounded-xl bg-zinc-50 px-3.5 py-2">
+                            <span className="text-xs text-brand-gray">{v.label}</span>
+                            <span className={v.passed ? "shrink-0 text-xs font-semibold text-emerald-700" : "shrink-0 text-xs font-semibold text-red-600"}>
+                              {v.passed ? "Pass" : "Fail"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      {orderNeedsApproval && (
+                        <p className="mt-2.5 rounded-xl bg-amber-50 px-3.5 py-2.5 text-xs font-medium leading-5 text-amber-700 ring-1 ring-inset ring-amber-200">
+                          One or more checks failed — order will be routed for approval.
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <p className="mt-4 text-xs leading-5 text-brand-gray">
                     {isPostedView
                       ? "This posted document is view-only so the completed inventory movement stays protected."
@@ -1365,6 +1563,158 @@ export default function SalesOrdersPage() {
                   </p>
                 </div>
               </aside>
+            </div>
+          </div>
+        </Modal>
+
+        <Modal
+          description="Filter by location and search to find the item to add to this order."
+          eyebrow="Sales Order"
+          isOpen={isItemPickerOpen}
+          onClose={() => { setIsItemPickerOpen(false); setItemPickerSearch(""); setItemPickerLocation("All"); setItemPickerPage(1); }}
+          size="md"
+          title="Select Item"
+        >
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-[1fr_180px]">
+              <Input
+                className="rounded-2xl"
+                onChange={(event) => { setItemPickerSearch(event.target.value); setItemPickerPage(1); }}
+                placeholder="Search SKU or description..."
+                value={itemPickerSearch}
+              />
+              <select
+                className="h-10 rounded-2xl border border-zinc-200 bg-white px-3 text-sm text-zinc-950 outline-none transition focus:border-brand-red focus:ring-4 focus:ring-red-50"
+                onChange={(event) => { setItemPickerLocation(event.target.value); setItemPickerPage(1); }}
+                value={itemPickerLocation}
+              >
+                <option value="All">All Locations</option>
+                {locationCodes.map((code) => (
+                  <option key={code} value={code}>{code}</option>
+                ))}
+              </select>
+            </div>
+            <div className="overflow-hidden rounded-[20px] border border-zinc-200/80 bg-white">
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="border-b border-zinc-100 bg-zinc-50 text-xs uppercase tracking-[0.14em] text-brand-gray">
+                    <tr>
+                      <th className="px-4 py-3">SKU</th>
+                      <th className="px-4 py-3">Description</th>
+                      <th className="px-4 py-3">Location</th>
+                      <th className="px-4 py-3 text-right">Unit Price</th>
+                      <th className="px-4 py-3 text-right">On Hand</th>
+                      <th className="px-4 py-3" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100">
+                    {paginatedPickerItems.map((item) => (
+                      <tr key={item.sku} className="hover:bg-zinc-50/60">
+                        <td className="px-4 py-3 font-medium text-zinc-950">{item.sku}</td>
+                        <td className="px-4 py-3 text-brand-gray">{item.description}</td>
+                        <td className="px-4 py-3 text-brand-gray">{item.location}</td>
+                        <td className="px-4 py-3 text-right text-zinc-950">{formatCurrency(item.unitPrice)}</td>
+                        <td className="px-4 py-3 text-right text-zinc-950">{formatNumber(item.onHand)}</td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            className="rounded-full bg-brand-red px-3 py-1 text-xs font-semibold text-white transition hover:bg-red-700"
+                            onClick={() => selectPickerItem(item)}
+                            type="button"
+                          >
+                            Select
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredPickerItems.length === 0 && (
+                      <tr>
+                        <td className="px-4 py-10 text-center text-sm text-brand-gray" colSpan={6}>
+                          No items matched your search and location filter.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {totalItemPickerPages > 1 && (
+                <div className="flex items-center justify-between border-t border-zinc-100 px-4 py-3 text-sm text-brand-gray">
+                  <span>{formatNumber((safeItemPickerPage - 1) * PICKER_PER_PAGE + 1)}–{formatNumber(Math.min(safeItemPickerPage * PICKER_PER_PAGE, filteredPickerItems.length))} of {formatNumber(filteredPickerItems.length)}</span>
+                  <div className="flex items-center gap-2">
+                    <button className="rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium transition hover:bg-zinc-50 disabled:opacity-40" disabled={safeItemPickerPage === 1} onClick={() => setItemPickerPage((p) => Math.max(1, p - 1))} type="button">Prev</button>
+                    <button className="rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium transition hover:bg-zinc-50 disabled:opacity-40" disabled={safeItemPickerPage === totalItemPickerPages} onClick={() => setItemPickerPage((p) => Math.min(totalItemPickerPages, p + 1))} type="button">Next</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </Modal>
+
+        <Modal
+          description="Search by name, number, or city to find and select the customer for this order."
+          eyebrow="Sales Order"
+          isOpen={isCustomerPickerOpen}
+          onClose={() => { setIsCustomerPickerOpen(false); setCustomerPickerSearch(""); setCustomerPickerPage(1); }}
+          size="md"
+          title="Select Customer"
+        >
+          <div className="space-y-4">
+            <Input
+              className="rounded-2xl"
+              onChange={(event) => { setCustomerPickerSearch(event.target.value); setCustomerPickerPage(1); }}
+              placeholder="Search name, customer number, or city..."
+              value={customerPickerSearch}
+            />
+            <div className="overflow-hidden rounded-[20px] border border-zinc-200/80 bg-white">
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="border-b border-zinc-100 bg-zinc-50 text-xs uppercase tracking-[0.14em] text-brand-gray">
+                    <tr>
+                      <th className="px-4 py-3">No.</th>
+                      <th className="px-4 py-3">Name</th>
+                      <th className="px-4 py-3">City</th>
+                      <th className="px-4 py-3">Email</th>
+                      <th className="px-4 py-3">Payment Terms</th>
+                      <th className="px-4 py-3" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100">
+                    {paginatedCustomerItems.map((customer) => (
+                      <tr key={customer.id} className="hover:bg-zinc-50/60">
+                        <td className="px-4 py-3 font-medium text-zinc-950">{customer.id}</td>
+                        <td className="px-4 py-3 text-zinc-950">{customer.name}</td>
+                        <td className="px-4 py-3 text-brand-gray">{customer.city || "-"}</td>
+                        <td className="px-4 py-3 text-brand-gray">{customer.email || "-"}</td>
+                        <td className="px-4 py-3 text-brand-gray">{customer.paymentTermsCode}</td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            className="rounded-full bg-brand-red px-3 py-1 text-xs font-semibold text-white transition hover:bg-red-700"
+                            onClick={() => selectCustomerPickerItem(customer)}
+                            type="button"
+                          >
+                            Select
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredCustomerItems.length === 0 && (
+                      <tr>
+                        <td className="px-4 py-10 text-center text-sm text-brand-gray" colSpan={6}>
+                          No customers matched your search.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {totalCustomerPages > 1 && (
+                <div className="flex items-center justify-between border-t border-zinc-100 px-4 py-3 text-sm text-brand-gray">
+                  <span>{formatNumber((safeCustomerPage - 1) * PICKER_PER_PAGE + 1)}–{formatNumber(Math.min(safeCustomerPage * PICKER_PER_PAGE, filteredCustomerItems.length))} of {formatNumber(filteredCustomerItems.length)}</span>
+                  <div className="flex items-center gap-2">
+                    <button className="rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium transition hover:bg-zinc-50 disabled:opacity-40" disabled={safeCustomerPage === 1} onClick={() => setCustomerPickerPage((p) => Math.max(1, p - 1))} type="button">Prev</button>
+                    <button className="rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium transition hover:bg-zinc-50 disabled:opacity-40" disabled={safeCustomerPage === totalCustomerPages} onClick={() => setCustomerPickerPage((p) => Math.min(totalCustomerPages, p + 1))} type="button">Next</button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </Modal>
