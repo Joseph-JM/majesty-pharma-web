@@ -80,7 +80,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               className="h-auto w-[172px]"
               height={60}
               priority
-              src="/majesty-pharma-logo.svg"
+              src="/majesty-pharma-web/majesty-pharma-logo.svg"
               width={172}
             />
             <p className="mt-2 text-xs font-medium uppercase tracking-[0.18em] text-brand-gray">Majesty Pharma ERP</p>
@@ -162,7 +162,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   className="h-auto w-[156px]"
                   height={54}
                   priority
-                  src="/majesty-pharma-logo.svg"
+                  src="/majesty-pharma-web/majesty-pharma-logo.svg"
                   width={156}
                 />
               </div>

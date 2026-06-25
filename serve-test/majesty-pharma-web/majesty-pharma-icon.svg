@@ -1,0 +1,26 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Majesty Pharma ERP Icon</title>
+  <rect width="256" height="256" rx="56" fill="#FFF8EA"/>
+  <path
+    d="M85 70C92 98 105 118 123 118C141 118 155 97 162 72C166 90 176 107 190 107C205 107 217 94 223 79C227 100 237 114 251 114C265 114 276 102 282 88C286 106 297 120 312 120C327 120 339 106 345 90L330 166C294 151 252 144 207 144C162 144 119 151 85 166L70 100C74 91 80 80 85 70Z"
+    fill="#E6BB4B"
+    transform="translate(-54 4)"
+  />
+  <circle cx="128" cy="64" r="15" fill="#E6BB4B"/>
+  <circle cx="69" cy="100" r="11" fill="#E6BB4B"/>
+  <circle cx="187" cy="100" r="11" fill="#E6BB4B"/>
+  <circle cx="41" cy="137" r="10" fill="#E6BB4B" opacity="0"/>
+  <circle cx="215" cy="137" r="10" fill="#E6BB4B" opacity="0"/>
+  <text
+    x="128"
+    y="196"
+    text-anchor="middle"
+    fill="#E50909"
+    font-size="118"
+    font-style="italic"
+    font-weight="700"
+    font-family="'Brush Script MT', 'Segoe Script', 'Snell Roundhand', cursive"
+  >
+    M
+  </text>
+</svg>

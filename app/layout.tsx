@@ -7,9 +7,9 @@ export const metadata: Metadata = {
   title: "Majesty Pharma ERP",
   description: "Majesty Pharma ERP for sales, inventory, customer management, and approvals.",
   icons: {
-    icon: "/majesty-pharma-icon.svg",
-    shortcut: "/majesty-pharma-icon.svg",
-    apple: "/majesty-pharma-icon.svg",
+    icon: "/majesty-pharma-web/majesty-pharma-icon.svg",
+    shortcut: "/majesty-pharma-web/majesty-pharma-icon.svg",
+    apple: "/majesty-pharma-web/majesty-pharma-icon.svg",
   },
 };
 
