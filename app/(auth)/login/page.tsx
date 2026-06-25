@@ -29,7 +29,7 @@ export default function LoginPage() {
             className="mx-auto h-auto w-full max-w-[280px]"
             height={98}
             priority
-            src="https://drive.google.com/file/d/1qaGEBS_pYCzkrVvz26LI99hsgZn9vmyh/view"
+            src="./majesty-pharma-web/majesty-pharma-logo.svg"
             width={280}
           />
           <h1 className="mt-6 text-3xl font-semibold tracking-tight text-zinc-950">Sign in to your account</h1>
