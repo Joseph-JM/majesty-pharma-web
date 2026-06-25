@@ -2,4 +2,4 @@
 2:I[39756,["/majesty-pharma-web/_next/static/chunks/1_q8ky6ovvbht.js","/majesty-pharma-web/_next/static/chunks/14mrh2-p_w84d.js","/majesty-pharma-web/_next/static/chunks/1_yevgrfnc59o.js"],"default"]
 3:I[37457,["/majesty-pharma-web/_next/static/chunks/1_q8ky6ovvbht.js","/majesty-pharma-web/_next/static/chunks/14mrh2-p_w84d.js","/majesty-pharma-web/_next/static/chunks/1_yevgrfnc59o.js"],"default"]
 4:[]
-0:{"rsc":["$","$1","c",{"children":[null,["$","$L2",null,{"parallelRouterKey":"children","template":["$","$L3",null,{}]}]]}],"isPartial":false,"staleTime":300,"varyParams":"$W4","buildId":"cqO7PgQgEeEJhYg5ers9Z"}
+0:{"rsc":["$","$1","c",{"children":[null,["$","$L2",null,{"parallelRouterKey":"children","template":["$","$L3",null,{}]}]]}],"isPartial":false,"staleTime":300,"varyParams":"$W4","buildId":"_o2pUiVRsUr1cAf0sPk9r"}
