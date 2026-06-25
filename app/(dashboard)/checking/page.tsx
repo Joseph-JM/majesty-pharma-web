@@ -79,12 +79,12 @@ function CameraScanner({
   const lastScanRef = useRef<string>("");
   const lastScanTimeRef = useRef<number>(0);
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isSupported] = useState(() => typeof window === "undefined" || "BarcodeDetector" in window);
+  const [isLoading, setIsLoading] = useState(() => typeof window === "undefined" || "BarcodeDetector" in window);
   const [error, setError] = useState<string | null>(null);
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
   const [activeCameraId, setActiveCameraId] = useState<string>("");
   const [flashSku, setFlashSku] = useState<string | null>(null);
-  const [isSupported, setIsSupported] = useState(true);
 
   // Scan loop — runs per animation frame
   const startScanLoop = useCallback(() => {
@@ -165,16 +165,16 @@ function CameraScanner({
 
   // Init: check API support then start camera
   useEffect(() => {
-    if (!("BarcodeDetector" in window)) {
-      setIsSupported(false);
-      setIsLoading(false);
-      return;
-    }
+    if (!isSupported) return;
     detectorRef.current = new window.BarcodeDetector!({
       formats: ["code_128", "ean_13", "ean_8", "code_39", "qr_code", "data_matrix", "itf"],
     });
-    startCamera();
-    return () => stopStream();
+    let active = true;
+    void Promise.resolve().then(() => { if (active) startCamera(); });
+    return () => {
+      active = false;
+      stopStream();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
